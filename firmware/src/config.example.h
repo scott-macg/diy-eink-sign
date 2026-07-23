@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef CONFIG_EXAMPLE_H
+#define CONFIG_EXAMPLE_H
 
 #include <Arduino.h>
 
@@ -29,13 +29,14 @@
 
 // ============================================================================
 // Network & Server Configuration
+// Copy this file to config.h and fill in your actual Wi-Fi and server settings.
 // ============================================================================
-#define WIFI_SSID       "curlmacg"
-#define WIFI_PASS       "1qaz2wsx3edc4rfv"
+#define WIFI_SSID       "YOUR_WIFI_SSID"
+#define WIFI_PASS       "YOUR_WIFI_PASSWORD"
 
 // Python backend endpoint and token
-#define SERVER_URL      "https://esp32-epaper-display.onrender.com/get/"
-#define DISPLAY_TOKEN   "sign_token_123"
+#define SERVER_URL      "https://your-app-name.onrender.com/get/"
+#define DISPLAY_TOKEN   "YOUR_SECRET_TOKEN"
 #define WIFI_TIMEOUT_MS 15000
 
 // ============================================================================
@@ -44,4 +45,4 @@
 #define DEFAULT_SLEEP_SEC 3600  // Default 1 hour sleep if no Cache-Control header
 #define MIN_SLEEP_SEC     60    // Minimum sleep duration (1 minute)
 
-#endif // CONFIG_H
+#endif // CONFIG_EXAMPLE_H

@@ -213,21 +213,22 @@ void setup() {
 
         preferences.end();
 
-        // Configure Deep Sleep & GPIO 9 Wakeup
-        Serial.printf("[POWER] Entering deep sleep for %u seconds...\n", sleepDurationSec);
-        esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
-        esp_sleep_enable_timer_wakeup((uint64_t)sleepDurationSec * 1000000ULL);
-        esp_deep_sleep_start();
+        // Configure Deep Sleep & GPIO 9 Wakeup (Commented out for debugging)
+        Serial.printf("[POWER] Deep sleep disabled for debugging (would have slept for %u seconds)\n", sleepDurationSec);
+        // esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
+        // esp_sleep_enable_timer_wakeup((uint64_t)sleepDurationSec * 1000000ULL);
+        // esp_deep_sleep_start();
     }
 
-    // In case Wi-Fi connection failed, retry after 5 minutes
+    // In case Wi-Fi connection failed
     preferences.end();
-    Serial.println("[POWER] Fallback deep sleep for 300 seconds after error...");
-    esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
-    esp_sleep_enable_timer_wakeup(300ULL * 1000000ULL);
-    esp_deep_sleep_start();
+    Serial.println("[POWER] Deep sleep disabled for debugging (fallback would sleep 300 seconds)");
+    // esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
+    // esp_sleep_enable_timer_wakeup(300ULL * 1000000ULL);
+    // esp_deep_sleep_start();
 }
 
 void loop() {
-    // Execution never reaches loop due to deep sleep
+    delay(100);
 }
+

@@ -1,0 +1,28 @@
+# Build output & Virtual Environments
+.pio/
+build/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.log
+test_output.png
+
+# Sensitive Configurations & Secrets
+config.h
+config.json
+settings.h
+credentials.json
+config/credentials.json
+token.pickle
+token.json
+*.env
+env.json
+*.pem
+*.key
+
+# IDE settings
+.vscode/
+.idea/
+.ds_store
+Thumbs.db

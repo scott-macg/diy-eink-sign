@@ -7,6 +7,9 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 
 ## 2. Hardware Architecture & Pinout Map
 
+> [!NOTE]
+> For step-by-step breadboard assembly diagrams and perf-board layout planning (30x70mm grid), see [breadboard_wiring.md](file:///home/smacd/diy-eink-sign/breadboard_wiring.md).
+
 ### Core Components
 - **MCU:** Seeed Studio XIAO ESP32-C6 (3.3V logic, integrated LiPo charging, Wi-Fi 6).
 - **Display:** WeAct Studio 2.9" 3-Color E-Paper Module (296x128 pixels, SPI interface).
@@ -73,6 +76,7 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 - [x] Add GPIO 9 Boot switch interrupt wake-up logic for manual force-refresh button.
 
 ### Phase 3: Hardware Assembly & Enclosure
-- [ ] Solder SPI harness, micro switch, and buzzer to perf-board attached to XIAO headers.
-- [ ] Test Li-ion battery charging circuit via USB-C.
+- [ ] Prototype hardware connections on breadboard (MCU, display SPI, switches, buzzer) powered via USB.
+- [ ] Transition to perf-board & solder harness once component configuration is validated.
+- [ ] Integrate and test Li-ion battery & charging circuit on perf-board.
 - [ ] Print 3D bezel/case and assemble plexiglass protective front window.
