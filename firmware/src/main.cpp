@@ -41,9 +41,9 @@ void playSoundError() {
 }
 
 // Callback for PNGdec line renderer
-void pngDrawCallback(PNGDRAW *pDraw) {
+int pngDrawCallback(PNGDRAW *pDraw) {
     uint16_t usPixels[300];
-    png.getLineAs16Bit(pDraw, usPixels, PNG_RGB565_LITTLE_ENDIAN, 0x0000);
+    png.getLineAsRGB565(pDraw, usPixels, PNG_RGB565_LITTLE_ENDIAN, 0x0000);
 
     for (int x = 0; x < pDraw->iWidth; x++) {
         uint16_t rgb = usPixels[x];
@@ -61,6 +61,7 @@ void pngDrawCallback(PNGDRAW *pDraw) {
 
         display.drawPixel(x, pDraw->y, color);
     }
+    return 1;
 }
 
 // Extract max-age integer from Cache-Control header string
@@ -131,6 +132,9 @@ void setup() {
         } else {
             http.begin(url);
         }
+        const char * headers[] = {"Cache-Control", "ETag"};
+        http.collectHeaders(headers, 2);
+
         http.addHeader("X-Display-ID", DISPLAY_TOKEN);
         if (storedETag.length() > 0) {
             http.addHeader("ETag", storedETag);
@@ -144,12 +148,12 @@ void setup() {
 
         uint32_t sleepDurationSec = DEFAULT_SLEEP_SEC;
         if (http.hasHeader("Cache-Control")) {
-            sleepDurationSec = parseCacheControlMaxAge(http.getHeader("Cache-Control"));
+            sleepDurationSec = parseCacheControlMaxAge(http.header("Cache-Control"));
         }
 
         if (httpCode == 200) {
             Serial.println("[HTTP] New image data received! Updating display...");
-            String newETag = http.getHeader("ETag");
+            String newETag = http.header("ETag");
             if (newETag.length() > 0) {
                 preferences.putString("etag", newETag);
                 Serial.print("[HTTP] Updated stored ETag: ");
@@ -211,7 +215,7 @@ void setup() {
 
         // Configure Deep Sleep & GPIO 9 Wakeup
         Serial.printf("[POWER] Entering deep sleep for %u seconds...\n", sleepDurationSec);
-        esp_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
+        esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
         esp_sleep_enable_timer_wakeup((uint64_t)sleepDurationSec * 1000000ULL);
         esp_deep_sleep_start();
     }
@@ -219,7 +223,7 @@ void setup() {
     // In case Wi-Fi connection failed, retry after 5 minutes
     preferences.end();
     Serial.println("[POWER] Fallback deep sleep for 300 seconds after error...");
-    esp_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
+    esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
     esp_sleep_enable_timer_wakeup(300ULL * 1000000ULL);
     esp_deep_sleep_start();
 }

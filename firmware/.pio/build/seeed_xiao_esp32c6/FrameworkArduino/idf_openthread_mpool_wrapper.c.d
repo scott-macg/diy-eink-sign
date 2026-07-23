@@ -1,0 +1,31 @@
+.pio/build/seeed_xiao_esp32c6/FrameworkArduino/idf_openthread_mpool_wrapper.c.o: \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32/cores/esp32/idf_openthread_mpool_wrapper.c \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/soc/esp32c6/include/soc/soc_caps.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/qio_qspi/include/sdkconfig.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/newlib/platform_include/assert.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/heap/include/esp_heap_caps.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/heap/include/multi_heap.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/esp_common/include/esp_err.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/newlib/platform_include/stdio.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/esp_common/include/esp_compiler.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/esp_common/include/esp_attr.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/esp_rom/include/esp_rom_sys.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/soc/esp32c6/include/soc/reset_reasons.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_config.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_level.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/esp_common/include/esp_assert.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_color.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_buffer.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_timestamp.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_write.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_format.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_args.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/esp_common/include/esp_macros.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/esp_common/include/esp_assert.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_log_attr.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/log/include/esp_private/log_attr.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/openthread/openthread/include/openthread/instance.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/openthread/openthread/include/openthread/error.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/openthread/openthread/include/openthread/platform/toolchain.h \
+ /home/smacd/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/openthread/openthread/include/openthread/platform/messagepool.h

@@ -30,12 +30,12 @@
 // ============================================================================
 // Network & Server Configuration
 // ============================================================================
-#define WIFI_SSID       "YOUR_WIFI_SSID"
-#define WIFI_PASS       "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID       "curlmacg"
+#define WIFI_PASS       "1qaz2wsx3edc4rfv"
 
 // Python backend endpoint and token
-#define SERVER_URL      "http://192.168.1.100:8080/get/"
-#define DISPLAY_TOKEN   "default"
+#define SERVER_URL      "https://esp32-epaper-display.onrender.com/get/"
+#define DISPLAY_TOKEN   "sign_token_123"
 #define WIFI_TIMEOUT_MS 15000
 
 // ============================================================================
