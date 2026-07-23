@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: diy-eink-sign-server
+    env: docker
+    dockerfilePath: ./server/epaper-server/Dockerfile
+    dockerContext: ./server/epaper-server
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: BIND
+        value: 0.0.0.0
