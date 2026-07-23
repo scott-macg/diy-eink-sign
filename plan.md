@@ -68,6 +68,12 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 - [x] Fixed Pillow 10+ compatibility (`textbbox`) in `helper.py`/`date.py` and added graceful missing-credential handling in `googlecalendar.py`. Verified 296x128 image rendering (`test_output.png`).
 - [x] Created `config/credentials.json.example` and `config/README.md` for Google Calendar OAuth setup.
 - [x] Implemented `quotes` widget module (`epaperengine/widgets/quotes.py`) with dynamic quote fetching, local fallback pool, auto text-wrapping, and 3-color styling.
+- [x] **Render.com Deployment Optimization:** Commented out external API network calls (`googlemaps.py`, `googlecalendar.py`, `weather.py`) and updated `config.example.json` to prevent headless startup crashes during deployment.
+- [ ] **Future Circle-Back (Optional API Re-enabling):**
+  - [ ] **Google Maps:** Supply `client_key` in `config.json` and uncomment `googlemaps.Client` & `_fetch_map` in `googlemaps.py`.
+  - [ ] **Google Calendar:** Mount `credentials.json`/`token.pickle` and uncomment OAuth/calendar list fetching in `googlecalendar.py`.
+  - [ ] **Weather:** Supply OpenWeatherMap `api_key` & `city_id` in `config.json` and uncomment `requests.get` in `weather.py`.
+
 
 ### Phase 2: ESP32-C6 Firmware Development
 - [x] Create `platformio.ini` targeting `seeed_xiao_esp32c6`.

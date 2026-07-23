@@ -1,7 +1,9 @@
 # Build output & Virtual Environments
 .pio/
+firmware/.pio/
 build/
 venv/
+
 .venv/
 __pycache__/
 *.pyc
