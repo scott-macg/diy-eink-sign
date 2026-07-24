@@ -10,11 +10,13 @@ This document contains step-by-step breadboard prototyping instructions and elec
 | :--- | :--- | :--- |
 | **MCU** | Seeed Studio XIAO ESP32-C6 (Headers soldered) | 1 |
 | **Display** | WeAct Studio 2.9" 3-Color E-Paper Module (SPI interface, 8-pin harness) | 1 |
+| **Battery** | 902540 3.7V 800mAh 2.96Wh 25C LiPo Battery (Integrated PCM) | 1 |
+| **Battery Sense**| 2x 100kΩ 1/4W Resistors (Voltage Divider for `D0` / `GPIO 0` ADC) | 2 |
 | **Switches** | 2-pin / 4-pin Momentary Tactile Pushbuttons | 2 |
-| **Audio** | Piezo Buzzer (3.3V compatible) | 1 |
+| **Audio** | 20mm 8Ω Dynamic Speaker, NPN Transistor (2N2222/2N3904), 1kΩ Resistor, Flyback Diode (1N4148/1N4001) | 1 set |
 | **Prototyping** | Standard Solderless Breadboard (400 or 830 tie-point) | 1 |
 | **Wiring** | Dupont Jumper Wires (Male-to-Male, Male-to-Female) | ~15 |
-| **Power** | USB-C Cable (Battery integration omitted during breadboard phase) | 1 |
+| **Power** | USB-C Cable (XIAO onboard LiPo charger) | 1 |
 
 ---
 
@@ -52,8 +54,11 @@ This document contains step-by-step breadboard prototyping instructions and elec
 | **Boot Switch** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
 | **Reset Switch** | Leg 1 | Jumper | `RST` / `CHIP_PU` | CHIP_PU | Hardware Chip Reset |
 | **Reset Switch** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
-| **Piezo Buzzer** | Positive (`+`) | Red / Jumper | `D6` | GPIO 16 | PWM Audio Alert Output |
-| **Piezo Buzzer** | Negative (`-`) | Black / Jumper | `GND` | - | Ground Connection |
+| **NPN Transistor Base** | Base Pin | 1kΩ Resistor | `D6` | GPIO 16 | PWM / PCM Audio Output |
+| **Speaker Positive** | Positive (`+`) | Red Wire | 5V Rail | - | 5V Power Supply |
+| **Speaker Negative** | Negative (`-`) | Black Wire | NPN Collector | - | Switch path through transistor to GND |
+| **Transistor Emitter** | Emitter Pin | Jumper Wire | `GND` | - | Common Ground |
+| **Battery Sense Divider** | `BAT+` -> `D0` -> `GND` | 2x 100kΩ Resistors | `D0` / `A0` | GPIO 0 | Analog Battery Voltage Sense (Divider Ratio 2.0) |
 
 ---
 
@@ -93,7 +98,8 @@ graph TD
     subgraph INPUTS ["Tactile Switches & Peripherals"]
         SW_BOOT["Boot / Refresh Button"]
         SW_RST["Hardware Reset Button"]
-        BUZZER["Piezo Buzzer"]
+        SPEAKER["20mm Dynamic Speaker"]
+        NPN["NPN Transistor Switch"]
     end
 
     %% Power Connections
@@ -101,7 +107,8 @@ graph TD
     XIAO_GND --> E_GND
     XIAO_GND --> SW_BOOT
     XIAO_GND --> SW_RST
-    XIAO_GND --> BUZZER
+    XIAO_GND --> NPN
+    USB -->|5V Rail| SPEAKER
 
     %% Display SPI Connections
     GPIO18 -->|SPI MOSI| E_DIN
@@ -111,10 +118,11 @@ graph TD
     GPIO21 -->|Display Reset| E_RST
     E_BUSY -->|Busy Status| GPIO22
 
-    %% Switch & Buzzer Connections
+    %% Switch & Audio Connections
     GPIO9 -->|Force Refresh| SW_BOOT
     CHIP_PU -->|MCU Hardware Reset| SW_RST
-    GPIO16 -->|Audio Tone| BUZZER
+    GPIO16 -->|PWM / PCM Audio (1kΩ)| NPN
+    NPN -->|Collector Drive| SPEAKER
 ```
 
 ---
@@ -149,9 +157,12 @@ Connect the 8-pin display harness directly into the XIAO pins or breadboard rows
    - Terminal A -> Connect to XIAO `RST` pad / header pin.
    - Terminal B -> Connect to `GND` power rail.
 
-### Step 5: Add Piezo Buzzer
-1. Positive leg (`+`) -> Connect to XIAO `D6` (Pin 12).
-2. Negative leg (`-`) -> Connect to `GND` ground rail.
+### Step 5: Add 20mm Speaker & NPN Transistor Driver
+1. Connect NPN Transistor **Emitter** (`E`) to `GND` rail.
+2. Connect a **1kΩ Resistor** between XIAO `D6` (Pin 12 / GPIO 16) and NPN Transistor **Base** (`B`).
+3. Connect NPN Transistor **Collector** (`C`) to Speaker negative (`-`) lead.
+4. Connect Speaker positive (`+`) lead to `5V` power rail.
+5. Place a **Flyback Diode** (1N4148/1N4001) in parallel across speaker leads (Cathode to `5V`, Anode to Collector).
 
 ---
 
@@ -224,4 +235,21 @@ Before plugging in the USB-C cable to power the breadboard:
 - [ ] **Visual Continuity Check:** Verify no jumper wire leads are touching adjacent breadboard pins.
 - [ ] **Power & Ground Polish:** Confirm `3V3` connects only to display `VCC`, and all `GND` lines share a common rail.
 - [ ] **SPI Bus Sanity:** Confirm MOSI (`D10`), SCK (`D8`), CS (`D1`), and DC (`D2`) match the pin defines in `firmware/src/config.h`.
+
+---
+
+## 8. LiPo Battery Direct-Soldering & Safety Guidelines
+
+For the 902540 3.7V 800mAh 25C LiPo battery (direct soldered to XIAO `BAT+` / `BAT-` pads):
+
+> [!CAUTION]
+> **Cut & Strip One Wire at a Time!**
+> Never cut both the Red (`+`) and Black (`-`) wires simultaneously with a metal wire cutter. The metal jaw will create a direct short circuit across the battery terminals.
+
+### Step-by-Step Soldering Sequence:
+1. **Clip, strip, and tin the RED wire first.**
+2. Protect the exposed black wire lead with electrical tape while soldering the red wire.
+3. Solder the **RED wire** to the **`BAT+` pad** on the underside of the XIAO ESP32-C6.
+4. Clip, strip, tin, and solder the **BLACK wire** to the **`BAT-` pad**.
+5. Apply a small drop of hot glue or liquid electrical tape over the solder joints on the board for mechanical strain relief.
 - [ ] **Switch Wiring:** Ensure pushbuttons short to `GND` when pressed and do not short `3V3` to ground.

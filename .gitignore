@@ -28,3 +28,4 @@ env.json
 .idea/
 .ds_store
 Thumbs.db
+*:Zone.Identifier

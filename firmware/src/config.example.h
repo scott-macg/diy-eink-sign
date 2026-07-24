@@ -18,6 +18,7 @@
 // Peripherals
 #define BOOT_BTN_PIN      9  // Xiao D9 / BOOT pin (External Boot & Force-Refresh Switch)
 #define BUZZER_PIN       16  // Xiao D6 (Piezo Buzzer Audio Alert)
+#define BAT_SENSE_PIN     0  // Xiao D0 / GPIO 0 (Analog Battery Sense via 2x 100k resistor divider)
 
 // Note: External Reset Switch is wired directly between RST (CHIP_PU) and GND.
 
@@ -40,9 +41,13 @@
 #define WIFI_TIMEOUT_MS 15000
 
 // ============================================================================
-// Power Management Parameters
+// Power Management & Battery Sensing Parameters
 // ============================================================================
 #define DEFAULT_SLEEP_SEC 3600  // Default 1 hour sleep if no Cache-Control header
 #define MIN_SLEEP_SEC     60    // Minimum sleep duration (1 minute)
+
+#define BAT_DIVIDER_RATIO                 2.0f // 2x 100k ohm resistor divider (V_bat = V_adc * 2)
+#define LOW_BATTERY_PERCENT_THRESHOLD     20   // Low battery indicator threshold (%)
+#define CRITICAL_BATTERY_PERCENT_THRESHOLD 10   // Critical battery warning beep threshold (%)
 
 #endif // CONFIG_EXAMPLE_H
