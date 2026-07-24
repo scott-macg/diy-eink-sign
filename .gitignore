@@ -13,6 +13,8 @@ test_output.png
 # Sensitive Configurations & Secrets
 config.h
 config.json
+firmware/src/config.h
+server/epaper-server/config.json
 settings.h
 credentials.json
 config/credentials.json

@@ -277,10 +277,14 @@ void setup() {
     WiFi.mode(WIFI_OFF);
     preferences.end();
 
-    Serial.printf("[POWER] Deep sleep duration set to %u seconds\n", sleepDurationSec);
-    // esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
-    // esp_sleep_enable_timer_wakeup((uint64_t)sleepDurationSec * 1000000ULL);
-    // esp_deep_sleep_start();
+    if (configManager.config.developer_mode) {
+        Serial.println("[POWER] Persistent Developer Mode enabled in config.json - deep sleep bypassed.");
+    } else {
+        Serial.printf("[POWER] Entering deep sleep for %u seconds...\n", sleepDurationSec);
+        esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
+        esp_sleep_enable_timer_wakeup((uint64_t)sleepDurationSec * 1000000ULL);
+        esp_deep_sleep_start();
+    }
 }
 
 void loop() {
