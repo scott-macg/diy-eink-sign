@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIY E-Ink Smart Sign</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <div class="brand">
+        <span>🖼️</span>
+        <h1>E-Ink Sign</h1>
+      </div>
+      <div id="modeBadge" class="badge badge-prod">PROD MODE</div>
+    </header>
+
+    <!-- Display Live Preview -->
+    <section class="glass-card screen-preview-container">
+      <div class="card-title">📺 Current Display State</div>
+      <div class="screen-frame">
+        <img id="displayPreview" src="/api/render.png" alt="E-Ink Display Preview">
+      </div>
+    </section>
+
+    <!-- Telemetry Stats -->
+    <section class="glass-card">
+      <div class="card-title">📊 Device Telemetry</div>
+      <div class="telemetry-grid">
+        <div class="stat-item">
+          <div class="stat-label">Battery Level</div>
+          <div id="statBattery" class="stat-value">-- %</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">ADC Sense</div>
+          <div id="statAdc" class="stat-value">-- mV</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Reboot Count</div>
+          <div id="statReboots" class="stat-value">--</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">ETag Revision</div>
+          <div id="statEtag" class="stat-value">--</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Instant Push Override Form -->
+    <section class="glass-card">
+      <div class="card-title">📢 Instant Push Override</div>
+      <form id="overrideForm">
+        <div class="form-group">
+          <label for="overrideMessage">Message Text</label>
+          <input type="text" id="overrideMessage" placeholder="In a meeting until 3 PM" required>
+        </div>
+        <div class="form-group">
+          <label for="overrideSubtext">Subtext / Subtitle</label>
+          <input type="text" id="overrideSubtext" placeholder="Do Not Disturb">
+        </div>
+        <div class="form-group">
+          <label for="overrideDuration">Schedule Duration (minutes)</label>
+          <input type="number" id="overrideDuration" value="60" min="5" max="1440">
+        </div>
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Push Message</button>
+          <button type="button" id="btnClearOverride" class="btn btn-danger">Clear</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Settings & Dev Mode Toggle -->
+    <section class="glass-card">
+      <div class="card-title">⚙️ Remote Settings</div>
+      <div class="toggle-row">
+        <div>
+          <div style="font-weight:600; font-size:0.95rem;">Developer Mode</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">2-min sleep, Serial logging & DEV badge</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggleDevMode">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

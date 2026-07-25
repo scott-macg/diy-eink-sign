@@ -1,390 +1,198 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
-#include <Preferences.h>
-#include <SPI.h>
 #include <GxEPD2_3C.h>
-#include <PNGdec.h>
-#include "config.h"
-#include "config_manager.h"
-#include "web_server_manager.h"
-#include "battery_curve.h"
+#include <esp_sleep.h>
 
-// Initialize display driver for WeAct 2.9" 3-color (296x128)
-GxEPD2_3C<GxEPD2_290c, GxEPD2_290c::HEIGHT> display(
-    GxEPD2_290c(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY)
+#include "config.h"
+#include "manifest_manager.h"
+
+// Waveshare / WeAct 2.9" 3-Color E-Paper Display (296x128)
+// Class: GxEPD2_290_C90c
+// Pins: CS=1, DC=2, RST=21, BUSY=22, SCK=19, MOSI=18
+GxEPD2_3C<GxEPD2_290_C90c, GxEPD2_290_C90c::HEIGHT> display(
+    GxEPD2_290_C90c(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY)
 );
 
-PNG png;
-Preferences preferences;
+// Global RTC memory boot counter preserved across deep sleep resets
+RTC_DATA_ATTR static uint32_t boot_counter = 0;
 
-// Audio Feedback Helper
-void playBuzzerTone(uint16_t freq, uint16_t durationMs) {
+static uint8_t bw_buffer[BITMAP_BUFFER_SIZE];
+static uint8_t red_buffer[BITMAP_BUFFER_SIZE];
+
+// Play notification PWM audio chime on GPIO 16
+void play_chime() {
     pinMode(BUZZER_PIN, OUTPUT);
-    tone(BUZZER_PIN, freq, durationMs);
-    delay(durationMs + 20);
+    // 2-tone notification melody (1000Hz -> 1500Hz)
+    tone(BUZZER_PIN, 1000, 100);
+    delay(120);
+    tone(BUZZER_PIN, 1500, 150);
+    delay(180);
     noTone(BUZZER_PIN);
+    digitalWrite(BUZZER_PIN, LOW);
 }
 
-void playSoundBootWake() {
-    playBuzzerTone(1000, 80);
-    delay(40);
-    playBuzzerTone(1500, 80);
-}
-
-void playSoundSuccess() {
-    playBuzzerTone(1200, 100);
-    delay(50);
-    playBuzzerTone(1800, 150);
-}
-
-void playSoundError() {
-    playBuzzerTone(400, 300);
-}
-
-void playSoundLowBattery() {
-    playBuzzerTone(400, 150);
-    delay(100);
-    playBuzzerTone(300, 250);
-}
-
-// Battery Sensing Helpers (16-sample averaged reading for voltage stability)
-float readBatteryVoltage() {
-    uint32_t totalMv = 0;
-    const int numSamples = 16;
-    for (int i = 0; i < numSamples; i++) {
-        totalMv += analogReadMilliVolts(BAT_SENSE_PIN);
-        delayMicroseconds(100);
-    }
-    float avgMv = static_cast<float>(totalMv) / numSamples;
-    return (avgMv * BAT_DIVIDER_RATIO) / 1000.0f;
-}
-
-int readBatteryPercent() {
-    float vbat = readBatteryVoltage();
-    return batteryCurveManager.getPercent(vbat);
-}
-
-// Callback for PNGdec line renderer
-int pngDrawCallback(PNGDRAW *pDraw) {
-    uint16_t usPixels[300];
-    png.getLineAsRGB565(pDraw, usPixels, PNG_RGB565_LITTLE_ENDIAN, 0x0000);
-
-    for (int x = 0; x < pDraw->iWidth; x++) {
-        uint16_t rgb = usPixels[x];
-        uint8_t r = (rgb >> 11) & 0x1F;
-        uint8_t g = (rgb >> 5) & 0x3F;
-        uint8_t b = rgb & 0x1F;
-
-        // Map RGB565 to 3-Color E-Paper Palette (White, Black, Red)
-        uint16_t color = GxEPD_WHITE;
-        if (r > 15 && g < 15 && b < 15) {
-            color = GxEPD_RED;
-        } else if (r < 10 && g < 10 && b < 10) {
-            color = GxEPD_BLACK;
-        }
-
-        display.drawPixel(x, pDraw->y, color);
-    }
-    return 1;
-}
-
-// Fast B/W PNGdec line renderer (ignores red channel for 1.5s expedited cycling)
-int pngDrawCallbackFastBW(PNGDRAW *pDraw) {
-    uint16_t usPixels[300];
-    png.getLineAsRGB565(pDraw, usPixels, PNG_RGB565_LITTLE_ENDIAN, 0x0000);
-
-    for (int x = 0; x < pDraw->iWidth; x++) {
-        uint16_t rgb = usPixels[x];
-        uint8_t r = (rgb >> 11) & 0x1F;
-        uint8_t g = (rgb >> 5) & 0x3F;
-        uint8_t b = rgb & 0x1F;
-
-        // Map to Black vs White only (Fast B/W)
-        uint16_t color = GxEPD_WHITE;
-        if (r < 15 && g < 15 && b < 15) {
-            color = GxEPD_BLACK;
-        }
-
-        display.drawPixel(x, pDraw->y, color);
-    }
-    return 1;
-}
-
-// Extract max-age integer from Cache-Control header string
-uint32_t parseCacheControlMaxAge(const String& header) {
-    int idx = header.indexOf("max-age=");
-    if (idx != -1) {
-        String valStr = header.substring(idx + 8);
-        int endIdx = valStr.indexOf(',');
-        if (endIdx != -1) valStr = valStr.substring(0, endIdx);
-        uint32_t val = valStr.toInt();
-        if (val >= MIN_SLEEP_SEC) return val;
-    }
-    return configManager.config.default_sleep_sec;
-}
-
-// Helper for manual trigger from REPL or Server command
-void triggerDisplayRefresh() {
-    Serial.println("[DISPLAY] Manual refresh triggered from Web REPL.");
-    playSoundBootWake();
-}
-
-bool isMaintenanceMode = false;
-
-void setup() {
-    Serial.begin(115200);
-    delay(500);
-    Serial.println("\n=== DIY E-Ink Smart Sign starting up ===");
-
-    // Initialize LittleFS & Load Configuration
-    if (!configManager.begin()) {
-        Serial.println("[MAIN] ConfigManager initialization failed!");
-    }
-    batteryCurveManager.begin();
-
-    // Configure Boot / Force-Refresh Switch pin and Analog Battery Sense
-    pinMode(BOOT_BTN_PIN, INPUT_PULLUP);
-    pinMode(BAT_SENSE_PIN, INPUT);
+// Battery ADC reader
+uint16_t read_battery_adc() {
     analogReadResolution(12);
+    return analogRead(BAT_SENSE_PIN);
+}
 
-    // Read Battery Level
-    float vbat = readBatteryVoltage();
-    int battPct = readBatteryPercent();
-    Serial.printf("[BATT] Voltage: %.2fV (%d%%)\n", vbat, battPct);
+uint8_t calculate_battery_pct(uint16_t adc_val) {
+    // Piecewise approximation for 3.7V LiPo voltage divider
+    if (adc_val >= 2600) return 100;
+    if (adc_val <= 2000) return 0;
+    return (uint8_t)((adc_val - 2000) * 100 / 600);
+}
 
-    if (battPct <= CRITICAL_BATTERY_PERCENT_THRESHOLD) {
-        Serial.println("[BATT] WARNING: Battery critically low!");
-        if (configManager.config.audio_battery_alert) {
-            playSoundLowBattery();
-        } else {
-            Serial.println("[BATT] Audio battery alert is disabled in configuration.");
-        }
-    }
+// Wi-Fi Connection helper
+bool connect_wifi() {
+    if (WiFi.status() == WL_CONNECTED) return true;
 
-    // Check top microswitch (GPIO 9) press type & wakeup reason
-    bool isUserCycleAction = false;
-    esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-    if (configManager.config.developer_mode) {
-        Serial.println("[MODE] Persistent Developer Mode enabled in config.json! Deep sleep disabled.");
-        isMaintenanceMode = true;
-    } else if (digitalRead(BOOT_BTN_PIN) == LOW || wakeup_reason == ESP_SLEEP_WAKEUP_GPIO || wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
-        // Debounce / Hold duration check (400ms)
-        delay(400);
-        if (digitalRead(BOOT_BTN_PIN) == LOW) {
-            Serial.println("[MODE] Maintenance Mode requested via HELD top BOOT switch!");
-            isMaintenanceMode = true;
-            playSoundBootWake();
-        } else {
-            Serial.println("[MODE] User pressed top BOOT switch to cycle screen!");
-            isUserCycleAction = true;
-            playSoundBootWake();
-        }
-    } else {
-        Serial.println("[MODE] Operating in Normal Low-Power Mode.");
-    }
-
-
-    // Connect to Wi-Fi using dynamic config
-    Serial.print("[WIFI] Connecting to ");
-    Serial.println(configManager.config.wifi_ssid);
     WiFi.mode(WIFI_STA);
-    WiFi.begin(configManager.config.wifi_ssid.c_str(), configManager.config.wifi_pass.c_str());
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-    unsigned long startMs = millis();
-    while (WiFi.status() != WL_CONNECTED && (millis() - startMs) < configManager.config.wifi_timeout_ms) {
-        delay(250);
-        Serial.print(".");
+    uint32_t start_ms = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - start_ms) < WIFI_TIMEOUT_MS) {
+        delay(100);
     }
-    Serial.println();
+    return (WiFi.status() == WL_CONNECTED);
+}
 
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("[WIFI] Failed to connect to Wi-Fi!");
-        playSoundError();
+// Mid-Day Delta Checkpoint (Sub-1.5s HEAD check)
+// Returns 304 if unchanged, 200 if modified, or -1 on network failure
+int check_delta_checkpoint(const String &cached_etag) {
+    if (!connect_wifi()) return -1;
+
+    HTTPClient http;
+    String endpoint = String(SERVER_URL) + "checkpoint";
+    if (endpoint.startsWith("https://your-app-name")) {
+        // Fallback for default template
+        endpoint = "http://localhost:8000/api/checkpoint";
+    }
+
+    http.begin(endpoint);
+    if (cached_etag.length() > 0) {
+        http.addHeader("If-None-Match", cached_etag);
+    }
+
+    uint32_t req_start = millis();
+    int httpCode = http.sendRequest("HEAD");
+    uint32_t req_dur = millis() - req_start;
+
+    Serial.printf("[Checkpoint] Code: %d | Time: %ums\n", httpCode, req_dur);
+    http.end();
+    return httpCode;
+}
+
+// Full Morning Sync (Bilateral Heavy Exchange)
+bool perform_full_sync(ManifestData &manifest) {
+    if (!connect_wifi()) return false;
+
+    HTTPClient http;
+    uint16_t adc = read_battery_adc();
+    uint8_t pct = calculate_battery_pct(adc);
+
+    String sync_url = String(SERVER_URL) + "sync?batt_adc=" + String(adc) + 
+                      "&batt_pct=" + String(pct) + 
+                      "&reboot_count=" + String(boot_counter);
+    if (sync_url.startsWith("https://your-app-name")) {
+        sync_url = "http://localhost:8000/api/sync?batt_adc=" + String(adc) + 
+                   "&batt_pct=" + String(pct) + 
+                   "&reboot_count=" + String(boot_counter);
+    }
+
+    http.begin(sync_url);
+    int httpCode = http.GET();
+
+    if (httpCode == HTTP_CODE_OK) {
+        String payload = http.getString();
+        http.end();
+        WiFi.disconnect(true);
+        return saveManifest(payload, manifest);
+    }
+
+    Serial.printf("[Sync] Failed with HTTP code: %d\n", httpCode);
+    http.end();
+    WiFi.disconnect(true);
+    return false;
+}
+
+// Render raw 1-bit LittleFS bitmap to Waveshare display
+void render_bitmap_from_flash() {
+    if (!loadBitmapSlot(0, bw_buffer, red_buffer, BITMAP_BUFFER_SIZE)) {
+        Serial.println("[Display] Failed to load bitmap slot from LittleFS");
         return;
     }
 
-    Serial.print("[WIFI] Connected! IP: ");
-    Serial.println(WiFi.localIP());
+    SPI.begin(EINK_SCK, -1, EINK_MOSI, EINK_CS);
+    display.init(115200, true, 50, false);
+    display.setRotation(1);
 
-    if (isMaintenanceMode) {
-        // Start Web Server & WebSockets REPL Console
-        webServerManager.begin(triggerDisplayRefresh, readBatteryVoltage, readBatteryPercent, playBuzzerTone);
-        Serial.println("[MAINTENANCE] Maintenance Web Console active. Open http://" + WiFi.localIP().toString() + " in browser.");
-        return; // Stay awake in loop()
-    }
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+        display.drawBitmap(0, 0, bw_buffer, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
+        display.drawBitmap(0, 0, red_buffer, EINK_WIDTH, EINK_HEIGHT, GxEPD_RED);
+    } while (display.nextPage());
 
-    // =========================================================================
-    // Normal Low-Power Mode Execution Path
-    // =========================================================================
-    preferences.begin("epaper", false);
-    String storedETag = preferences.getString("etag", "");
+    display.hibernate();
+    Serial.println("[Display] Render complete, panel hibernating.");
+}
 
-    HTTPClient http;
-    WiFiClientSecure secureClient;
-    String url = configManager.config.server_url;
+void setup() {
+    boot_counter++;
+    Serial.begin(115200);
+    delay(100);
 
-    if (url.startsWith("https://")) {
-        secureClient.setInsecure();
-        http.begin(secureClient, url);
+    Serial.printf("\n=== DIY E-Ink Sign v0.2.0 (Boot #%u) ===\n", boot_counter);
+
+    initManifestFS();
+
+    ManifestData manifest;
+    bool has_manifest = loadManifest(manifest);
+
+    bool need_full_sync = false;
+
+    if (!has_manifest || !manifest.has_cached_slots) {
+        Serial.println("[Strategy] No valid cache found -> Full Morning Sync required.");
+        need_full_sync = true;
     } else {
-        http.begin(url);
-    }
-    const char * headers[] = {"Cache-Control", "ETag"};
-    http.collectHeaders(headers, 2);
+        // Run Sub-1.5s Mid-Day Delta Checkpoint
+        Serial.println("[Strategy] Running Mid-Day Delta Checkpoint...");
+        int check_code = check_delta_checkpoint(manifest.etag);
 
-    http.addHeader("X-Display-ID", configManager.config.display_token);
-    http.addHeader("X-Battery-Voltage", String(vbat, 2));
-    http.addHeader("X-Battery-Percent", String(battPct));
-
-    if (isUserCycleAction) {
-        http.addHeader("X-Display-Action", "cycle");
-        Serial.println("[HTTP] Manual top button press detected. Sending X-Display-Action: cycle (bypassing 304 cache).");
-    } else if (storedETag.length() > 0) {
-        http.addHeader("ETag", storedETag);
-        http.addHeader("If-None-Match", storedETag);
-        Serial.print("[HTTP] Sending stored ETag: ");
-        Serial.println(storedETag);
-    }
-
-    int httpCode = http.GET();
-    Serial.printf("[HTTP] GET status code: %d\n", httpCode);
-
-    uint32_t sleepDurationSec = configManager.config.default_sleep_sec;
-    if (http.hasHeader("Cache-Control")) {
-        sleepDurationSec = parseCacheControlMaxAge(http.header("Cache-Control"));
-    }
-
-    if (httpCode == 200) {
-        Serial.println("[HTTP] New image data received! Updating display...");
-        String newETag = http.header("ETag");
-        if (newETag.length() > 0) {
-            preferences.putString("etag", newETag);
-            Serial.print("[HTTP] Updated stored ETag: ");
-            Serial.println(newETag);
+        if (check_code == 304) {
+            Serial.println("[Strategy] HTTP 304 Not Modified -> Rapid disconnect, rendering local LittleFS cache.");
+            WiFi.disconnect(true);
+        } else if (check_code == 200 || check_code == -1) {
+            Serial.println("[Strategy] ETag modified or initial sync -> Fetching new manifest.");
+            need_full_sync = true;
         }
+    }
 
-        int len = http.getSize();
-        if (len > 0) {
-            uint8_t *buffer = (uint8_t *)malloc(len);
-            if (buffer != NULL) {
-                WiFiClient *stream = http.getStreamPtr();
-                int bytesRead = 0;
-                while (http.connected() && (bytesRead < len)) {
-                    size_t sizeAvail = stream->available();
-                    if (sizeAvail) {
-                        int c = stream->readBytes(buffer + bytesRead, sizeAvail);
-                        bytesRead += c;
-                    }
-                    delay(1);
-                }
-
-                // Initialize SPI and Display
-                SPI.begin(EINK_SCK, -1, EINK_MOSI, EINK_CS);
-                display.setRotation(1); // Landscape mode
-
-                uint8_t mode = configManager.config.refresh_mode;
-
-                // Determine active refresh scheme
-                bool useFastBW = (isUserCycleAction && (mode == REFRESH_MODE_TWO_PASS || mode == REFRESH_MODE_FAST_BW)) || (mode == REFRESH_MODE_FAST_BW);
-                bool usePartialWindow = (mode == REFRESH_MODE_PARTIAL);
-
-                if (useFastBW) {
-                    Serial.println("[DISPLAY] Scheme: Fast B/W Partial Refresh (~1.5s)...");
-                    display.init(115200, true, 20, false);
-                    display.setPartialWindow(0, 0, EINK_WIDTH, EINK_HEIGHT);
-                    display.firstPage();
-                    do {
-                        display.fillScreen(GxEPD_WHITE);
-                        int rc = png.openRAM(buffer, len, pngDrawCallbackFastBW);
-                        if (rc == PNG_SUCCESS) {
-                            png.decode(NULL, 0);
-                            png.close();
-                        }
-                    } while (display.nextPage());
-                } else if (usePartialWindow) {
-                    Serial.println("[DISPLAY] Scheme: Partial Window Quote Update (~5s)...");
-                    display.init(115200, true, 50, false);
-                    display.setPartialWindow(0, 40, EINK_WIDTH, 88);
-                    display.firstPage();
-                    do {
-                        display.fillScreen(GxEPD_WHITE);
-                        int rc = png.openRAM(buffer, len, pngDrawCallback);
-                        if (rc == PNG_SUCCESS) {
-                            png.decode(NULL, 0);
-                            png.close();
-                        }
-                    } while (display.nextPage());
-                } else {
-                    Serial.println("[DISPLAY] Scheme: Full 3-Color Clean Refresh (~14s)...");
-                    display.init(115200, true, 50, false);
-                    display.setFullWindow();
-                    display.firstPage();
-                    do {
-                        display.fillScreen(GxEPD_WHITE);
-                        int rc = png.openRAM(buffer, len, pngDrawCallback);
-                        if (rc == PNG_SUCCESS) {
-                            png.decode(NULL, 0);
-                            png.close();
-                        }
-                    } while (display.nextPage());
-                }
-
-                display.powerOff();
-                playSoundSuccess();
-
-                // Two-Pass Mode: If fast preview rendered on button tap, run delayed Pass 2 (Full 3-Color Clean Finish)
-                if (isUserCycleAction && mode == REFRESH_MODE_TWO_PASS) {
-                    Serial.println("[DISPLAY] Two-Pass Mode: Fast preview active. Pausing 10s before full 3-color clean pass...");
-                    delay(10000);
-                    Serial.println("[DISPLAY] Executing Two-Pass Pass 2: Full 3-Color Clean Finish...");
-                    display.init(115200, true, 50, false);
-                    display.setFullWindow();
-                    display.firstPage();
-                    do {
-                        display.fillScreen(GxEPD_WHITE);
-                        int rc = png.openRAM(buffer, len, pngDrawCallback);
-                        if (rc == PNG_SUCCESS) {
-                            png.decode(NULL, 0);
-                            png.close();
-                        }
-                    } while (display.nextPage());
-                    display.powerOff();
-                    playSoundSuccess(); // Pass 2 completion chime
-                }
-
-                free(buffer);
-            } else {
-                Serial.println("[ERROR] Failed to allocate memory for PNG buffer!");
-                playSoundError();
-            }
+    if (need_full_sync) {
+        if (perform_full_sync(manifest)) {
+            Serial.println("[Sync] Full sync successful, manifest updated.");
+        } else {
+            Serial.println("[Sync] Sync failed, using existing cache if available.");
         }
-    } else if (httpCode == 304) {
-        Serial.println("[HTTP] 304 Not Modified. Canvas untouched, preserving battery.");
-    } else {
-        Serial.printf("[HTTP] Unexpected response code: %d\n", httpCode);
-        playSoundError();
     }
 
-    http.end();
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    preferences.end();
+    // Render screen and play notification audio chime
+    render_bitmap_from_flash();
+    play_chime();
 
-    if (configManager.config.developer_mode) {
-        Serial.println("[POWER] Persistent Developer Mode enabled in config.json - deep sleep bypassed.");
-    } else {
-        Serial.printf("[POWER] Entering deep sleep for %u seconds...\n", sleepDurationSec);
-        esp_deep_sleep_enable_gpio_wakeup(1ULL << BOOT_BTN_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
-        esp_sleep_enable_timer_wakeup((uint64_t)sleepDurationSec * 1000000ULL);
-        esp_deep_sleep_start();
-    }
+    // Determine deep sleep interval
+    uint32_t sleep_sec = manifest.developer_mode ? 120 : (manifest.sleep_interval_sec > 0 ? manifest.sleep_interval_sec : 3600);
+
+    Serial.printf("[Power] Entering deep sleep for %u seconds (DevMode: %d)...\n\n", 
+                  sleep_sec, manifest.developer_mode);
+
+    esp_sleep_enable_timer_wakeup(sleep_sec * 1000000ULL);
+    esp_deep_sleep_start();
 }
 
 void loop() {
-    if (isMaintenanceMode) {
-        webServerManager.handleClient();
-    }
-    delay(10);
+    // Deep sleep prevents reaching loop()
 }

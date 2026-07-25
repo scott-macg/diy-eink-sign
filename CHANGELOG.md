@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.2.0] - 2026-07-25
+
+### Added & Refactored (Architecture Overhaul)
+- **Vercel Serverless FastAPI Backend (`/server`):**
+  - Deprecated legacy containerized backend and AIOHTTP/Flask server (`run.py`, `render.yaml`, `googlemaps.py`).
+  - Created FastAPI entry point `server/api/index.py` with 296x128 3-color Pillow layout engine (`server/api/composer.py`).
+  - Built `GET /api/sync` (bilateral telemetry & manifest/bitmap payload exchange) and `HEAD /api/checkpoint` (sub-1.5s delta checks via `If-None-Match` ETag validation).
+  - Integrated Google Calendar appointment syncing (`server/api/gcal.py`) and instant message overrides.
+  - Added Developer Mode compositor overlay: visual `🛠 DEV` badge rendered server-side into 296x128 bitmaps when `developer_mode=True`.
+
+- **Mobile PWA Dashboard (`/web`):**
+  - Hosted static Progressive Web App with dark mode glassmorphism UI (`index.html`, `styles.css`, `app.js`, `manifest.json`, `sw.js`).
+  - Live display preview rendering (`/api/render.png`), telemetry stats (battery %, ADC, reboots, ETag), custom push message override form, and remote Developer Mode toggle.
+
+- **Offline-First Smart Edge Node Firmware (`/firmware`):**
+  - Refactored ESP32-C6 firmware into an offline-first schedule executor with LittleFS manifest and binary bitmap caching (`manifest_manager.h/.cpp`).
+  - Implemented sub-1.5s mid-day `HEAD /api/checkpoint` requests: disconnects Wi-Fi within < 1.5s on `304 Not Modified`.
+  - Added GxEPD2 3-color panel bitmap rendering directly from LittleFS raw flash buffers, PWM audio notification chime, and RTC deep sleep execution.
+
 ## [v0.1.0-alpha] - 2026-07-25
 
 ### Pre-Release / Alpha Highlights
