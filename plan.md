@@ -38,26 +38,23 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 
 ## 3. Software & Backend Architecture
 
-### Server Layer (`/server`)
-- **Base Repo:** Forked from `ugomeda/esp32-epaper-display`.
-- **Stack:** Python 3, AIOHTTP, Pillow (PIL) image canvas generation.
-- **Widgets:**
-  1. `googlecalendar`: OAuth / Service account integration pulling daily events.
-  2. `inspirational_quotes`: Custom Python module pulling quotes from API or local JSON array.
-  3. `custom_push`: Emergency or prioritized messages passed via HTTP API or web form.
-- **Caching, Battery & Telemetry Strategy:**
-  - Emits `ETag` hashes matching canvas state.
-  - Returns `304 Not Modified` if data has not changed (preventing display refresh wear).
-  - Supplies `Cache-Control: max-age=...` header to instruct the ESP32-C6 exactly how long to sleep.
-  - Receives `X-Battery-Voltage` and `X-Battery-Percent` telemetry headers from ESP32-C6.
-  - Overlays a 3-color (Black/White/Red) low battery icon (`epaperengine/battery.py`) in the bottom-right corner when `X-Battery-Percent` $\le 20\%$.
+### Server Layer (`/server` & `/web`)
+- **Serverless Backend:** FastAPI + Pillow stack deployed on Vercel (`server/api/index.py`).
+- **Canvas Engine:** 296x128 3-color Pillow composer (`server/api/composer.py`) with GxEPD2 1-bit packed binary bitmap generation and `🛠 DEV` badge overlay support.
+- **Protocol Endpoints:**
+  - `GET /api/sync`: Bilateral exchange receiving telemetry (`batt_adc`, `batt_pct`, `reboot_count`) and delivering daily timeline manifests + raw 1-bit bitmap slots.
+  - `HEAD /api/checkpoint`: Sub-1.5s delta verification returning `304 Not Modified` on ETag match (`If-None-Match`).
+- **Mobile PWA Dashboard (`/web`):** Host-agnostic glassmorphism frontend for instant message override pushes, live display bitmap previews (`/api/render.png`), and remote Developer Mode toggling.
 
 ### Firmware Layer (`/firmware`)
 - **Framework:** PlatformIO / Arduino Core for ESP32-C6.
-- **Display Driver:** `GxEPD2` / `GxEPD2_3C` tailored to the 2.9" WeAct driver IC (`GxEPD2_290c`).
-- **Power & Battery Lifecycle:**
-  1. Boot up -> Measure battery voltage on ADC pin `D0` (`readBatteryVoltage()`, `readBatteryPercent()`).
-  2. If battery $\le 10\%$, play low-pitch audio warning chirp (`playSoundLowBattery()`).
+- **Display Driver:** `GxEPD2` / `GxEPD2_3C` tailored to the 2.9" WeAct driver IC (`GxEPD2_290_C90c`).
+- **Offline-First Flash Caching:** LittleFS local manifest and 1-bit bitmap storage (`manifest_manager.h/.cpp`).
+- **2-Stage Power & Battery Lifecycle:**
+  1. Boot up -> Mount LittleFS -> Read battery ADC on `D0`.
+  2. Perform fast `HEAD /api/checkpoint` request using cached ETag. If `304 Not Modified`, disconnect Wi-Fi within < 1.5s and render local LittleFS bitmap slot.
+  3. If modified or no cache -> Perform GET `/api/sync`, save new manifest + raw bitmaps to LittleFS.
+  4. Blast bitmap via SPI to WeAct display -> Play PWM notification chime -> Configure RTC timer -> Enter deep sleep (`esp_deep_sleep_start()`).
   3. Check wake-up source (Timer vs GPIO 9 Boot Switch).
   4. Connect to Wi-Fi.
   5. Send HTTP GET request with stored `ETag` and telemetry headers (`X-Battery-Voltage`, `X-Battery-Percent`).

@@ -370,6 +370,9 @@ Finally, I refactored the ESP32-C6 firmware in Phase 3. I introduced `manifest_m
 
 *The sign has evolved: sub-second serverless cold starts, a mobile PWA on Vercel, and sub-1.5s offline-first edge execution on the ESP32-C6.*
 
+[*1] *Addendum (July 25, 2026 — 11:05 AM EDT): Scott updated `AGENTS.md` to add two project guidelines: (1) update `plan.md` whenever major architectural changes occur, and (2) tailor agent communication to Scott's CS/coding experience level—explaining technical decisions through best practices and modern standards while remaining ready to dive into detailed explanations upon request. I updated `plan.md` with the v0.2.0 overhaul architecture details accordingly.*
+
+
 
 
 
