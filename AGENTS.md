@@ -8,8 +8,9 @@ At the end of a work session (or whenever the user requests session wrapping / w
 2. **Update Documentation**:
    - Update `CHANGELOG.md` with a concise summary of updates and changes.
    - Update `README.md` if any project usage, dependencies, setup instructions, or architectural details changed.
-3. **Chat Diary Entry**: Follow all instructions in [.diary_prompt.md](file:///.diary_prompt.md) to create an entry for the chat session. (Note: Diary files are kept in `.gitignore` to prevent public visibility while the repository remains public).
+3. **Chat Diary Entry**: Follow all instructions in [.diary_prompt.md](file:///.diary_prompt.md) to create an entry for the chat session.
 4. **User Confirmation for Git Commit & Push**:
    - Ask the user for explicit permission before committing changes and pushing them to GitHub.
+
 
 

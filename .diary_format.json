@@ -1,0 +1,40 @@
+{
+  "document": "CHAT_DIARY.md",
+  "description": "A running diary of AI-assisted development sessions on the DIY E-Ink Smart Sign project. Each entry is written from the AI agent's first-person perspective.",
+  "entry_format": {
+    "divider": "---",
+    "header": {
+      "date_format": "MMMM D, YYYY — h:mm A (timezone)",
+      "date_example": "July 24, 2026 — 11:39 PM (EDT)",
+      "author_label": "Author",
+      "author_value": "Model name(s) used during the chat session",
+      "author_example": "Claude Opus 4.6 (Thinking) / Gemini 3.6 Flash"
+    },
+    "greeting": "Dear diary,",
+    "body": {
+      "tone": "First-person, conversational, professional. Written as a development colleague reporting to their project lead.",
+      "content": [
+        "Narrative summary of what was accomplished in the session",
+        "Key interactions, decisions, and turning points",
+        "Technical details worth remembering",
+        "Observations or insights about the project's direction",
+        "Honest reflection — including mistakes, dead ends, or things left unfinished",
+        "Footnotes or cross-references if this chat session ran parallel to or overlapped with work in another chat session"
+      ],
+      "length": "2-6 paragraphs, depending on session complexity. Not a changelog — a story.",
+      "sign_off": "Optional. A closing thought, quip, or forward-looking note."
+    }
+  },
+  "rules": [
+    "Each entry is appended chronologically (newest at the bottom).",
+    "The divider '---' separates entries. The first entry has no leading divider.",
+    "Inspect Step 0 and all prompt steps (including <USER_SETTINGS_CHANGE> tags) in the transcript to identify all AI models used during the session. If models were switched mid-chat, list all in the Author field.",
+    "If the entry is being generated/backfilled by a different model than the original session, note the backfilling model if relevant.",
+    "If chats ran in parallel or overlapped chronologically to keep contexts clean, use footnotes or cross-references to link related entries in CHAT_DIARY.md.",
+    "Do not fabricate events. Only write about what actually happened in the chat session.",
+    "Keep it honest — if the AI made a mistake or the user corrected something, say so.",
+    "Technical jargon is fine; this is a developer's diary, not a press release.",
+    "Maintain strict security: CHAT_DIARY.md is public-facing. Never print real API keys, passwords, SSIDs, private tokens, or sensitive credentials in diary entries. Abstract or sanitize all sensitive values."
+  ]
+}
+
