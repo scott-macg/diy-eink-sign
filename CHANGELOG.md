@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] - 2026-07-25
+## [v0.1.0-alpha] - 2026-07-25
+
+### Pre-Release / Alpha Highlights
+- Initial alpha pre-release in preparation for physical perf board prototype assembly.
+- Added `HISTORY.md` to [`.gitignore`](file:///home/smacd/diy-eink-sign/.gitignore) in favor of [`CHAT_DIARY.md`](file:///home/smacd/diy-eink-sign/CHAT_DIARY.md).
+- Cleaned up stray OS metadata files (`*:Zone.Identifier`) and committed local offline quotes dataset (`~1,950` items) in `server/epaper-server/assets/quotes-v6.json`.
 
 ### Added
 - **End-of-Session Housekeeping Protocol (`AGENTS.md`):**
