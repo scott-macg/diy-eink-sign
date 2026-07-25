@@ -11,7 +11,9 @@ struct DeviceConfig {
     String wifi_pass;
     String server_url;
     String display_token;
+    uint32_t wifi_timeout_ms;
     uint32_t default_sleep_sec;
+    uint8_t refresh_mode;
     bool audio_battery_alert;
     bool developer_mode;
     uint32_t maintenance_timeout_sec;

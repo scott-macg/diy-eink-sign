@@ -84,14 +84,19 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 
 
 ### Phase 2: ESP32-C6 Firmware Development
-- [x] Create `platformio.ini` targeting `seeed_xiao_esp32c6`.
+- [x] Create `platformio.ini` targeting `seeed_xiao_esp32c6` with `huge_app.csv` 3MB flash partition scheme and LittleFS filesystem enabled.
 - [x] Configure `GxEPD2_3C` constructor with GPIO 18 (MOSI), GPIO 19 (SCK), GPIO 1 (CS), GPIO 2 (DC), GPIO 21 (RST), and GPIO 22 (BUSY).
 - [x] Implement HTTP client handling `ETag` headers and deep sleep duration parameters.
-- [x] Add GPIO 9 Boot switch interrupt wake-up logic for manual force-refresh button.
+- [x] Add GPIO 9 Boot switch interrupt wake-up logic for manual force-refresh button & Maintenance Mode trigger.
 - [x] Implement ADC battery voltage sensing on `GPIO 0` (`D0`) with 2x 100kΩ divider, HTTP telemetry headers (`X-Battery-Voltage`, `X-Battery-Percent`), and audio low-battery alert.
+- [x] Implement LittleFS configuration storage (`ConfigManager`) reading/writing dynamic parameters to `/config.json`.
+- [x] Implement embedded Web Dashboard and WebSockets Web REPL (`WebServerManager`) supporting live terminal CLI commands (`info`, `ls`, `cat`, `rm`, `config`, `set`, `play`, `refresh`, `reboot`).
+- [x] Implement REST File Manager endpoints (`/api/files`, `/api/upload`, `/api/delete`) for over-the-air audio and image asset updates.
+- [x] Add persistent `"developer_mode"` setting to disable deep sleep and maintain active Web REPL connectivity over Wi-Fi.
 - [ ] **Future Feature (On-Device Rendering & Offline Screen Caching):**
   - [ ] Store fallback bitmap screens/templates in LittleFS flash memory for offline display when Wi-Fi connection fails or server is unreachable.
   - [ ] Render basic local canvas graphics (clock, offline status badge, local alerts) directly on-device using `Adafruit_GFX` / `GxEPD2` primitives without server roundtrips.
+
 
 ### Phase 3: Hardware Assembly & Enclosure
 - [x] Prototype hardware connections on breadboard (MCU, display SPI, switches, 20mm speaker NPN driver, battery sense divider) powered via USB.

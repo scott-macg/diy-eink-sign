@@ -156,12 +156,25 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
                         <input type="text" id="cfg_display_token">
                     </div>
                     <div class="form-group">
+                        <label>WiFi Timeout (ms)</label>
+                        <input type="number" id="cfg_wifi_timeout_ms">
+                    </div>
+                    <div class="form-group">
                         <label>Default Sleep (Seconds)</label>
                         <input type="number" id="cfg_default_sleep_sec">
                     </div>
                     <div class="form-group">
                         <label>Maintenance Mode Timeout (Seconds)</label>
                         <input type="number" id="cfg_maintenance_timeout_sec">
+                    </div>
+                    <div class="form-group">
+                        <label>E-Paper Refresh Mode</label>
+                        <select id="cfg_refresh_mode">
+                            <option value="3">Two-Pass: Fast B/W Cycling -> Delayed 3-Color Clean (Default)</option>
+                            <option value="2">Fast B/W Partial Refresh (~1.5s)</option>
+                            <option value="1">Partial Window Quote Update (~5s)</option>
+                            <option value="0">Full 3-Color Refresh (~14s)</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Audio Battery Alert</label>
@@ -245,8 +258,10 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 document.getElementById('cfg_wifi_ssid').value = cfg.wifi_ssid || '';
                 document.getElementById('cfg_server_url').value = cfg.server_url || '';
                 document.getElementById('cfg_display_token').value = cfg.display_token || '';
+                document.getElementById('cfg_wifi_timeout_ms').value = cfg.wifi_timeout_ms || 15000;
                 document.getElementById('cfg_default_sleep_sec').value = cfg.default_sleep_sec || 3600;
                 document.getElementById('cfg_maintenance_timeout_sec').value = cfg.maintenance_timeout_sec || 300;
+                document.getElementById('cfg_refresh_mode').value = (cfg.refresh_mode !== undefined) ? cfg.refresh_mode : 3;
                 document.getElementById('cfg_audio_battery_alert').value = cfg.audio_battery_alert ? 'true' : 'false';
                 document.getElementById('cfg_developer_mode').value = cfg.developer_mode ? 'true' : 'false';
             } catch(e) { console.error(e); }
@@ -259,8 +274,10 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 wifi_pass: document.getElementById('cfg_wifi_pass').value,
                 server_url: document.getElementById('cfg_server_url').value,
                 display_token: document.getElementById('cfg_display_token').value,
+                wifi_timeout_ms: parseInt(document.getElementById('cfg_wifi_timeout_ms').value),
                 default_sleep_sec: parseInt(document.getElementById('cfg_default_sleep_sec').value),
                 maintenance_timeout_sec: parseInt(document.getElementById('cfg_maintenance_timeout_sec').value),
+                refresh_mode: parseInt(document.getElementById('cfg_refresh_mode').value),
                 audio_battery_alert: document.getElementById('cfg_audio_battery_alert').value === 'true',
                 developer_mode: document.getElementById('cfg_developer_mode').value === 'true'
             };
@@ -286,7 +303,20 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 }
                 files.forEach(f => {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${f.name}</td><td>${f.size} B</td><td><button class="btn-danger" onclick="deleteFile('${f.name}')">Delete</button></td>`;
+                    const tdName = document.createElement('td');
+                    tdName.textContent = f.name; // Safe: textContent never executes HTML
+                    const tdSize = document.createElement('td');
+                    tdSize.textContent = f.size + ' B';
+                    const tdAction = document.createElement('td');
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-danger';
+                    btn.textContent = 'Delete';
+                    btn.dataset.path = f.name; // Store path in data attribute (not inline onclick)
+                    btn.addEventListener('click', () => deleteFile(f.name));
+                    tdAction.appendChild(btn);
+                    tr.appendChild(tdName);
+                    tr.appendChild(tdSize);
+                    tr.appendChild(tdAction);
                     tbody.appendChild(tr);
                 });
             } catch(e) { console.error(e); }
@@ -407,6 +437,11 @@ void WebServerManager::handleFileUpload() {
     HTTPUpload& upload = server.upload();
     if (upload.status == UPLOAD_FILE_START) {
         String filename = upload.filename;
+        // Reject path traversal attempts
+        if (filename.indexOf("..") != -1) {
+            Serial.println("[WEB] Upload rejected: filename contains path traversal sequence");
+            return;
+        }
         if (!filename.startsWith("/")) filename = "/" + filename;
         Serial.printf("[WEB] File Upload Start: %s\n", filename.c_str());
         uploadFile = LittleFS.open(filename, "w");
@@ -426,6 +461,11 @@ void WebServerManager::handleDeleteFile() {
         return;
     }
     String path = server.arg("path");
+    // Reject path traversal attempts
+    if (path.indexOf("..") != -1) {
+        server.send(400, "text/plain", "Invalid path");
+        return;
+    }
     if (!path.startsWith("/")) path = "/" + path;
 
     if (LittleFS.exists(path)) {

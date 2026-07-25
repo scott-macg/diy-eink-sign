@@ -31,3 +31,6 @@ env.json
 .ds_store
 Thumbs.db
 *:Zone.Identifier
+
+# Work in progress — not ready for public
+README.md

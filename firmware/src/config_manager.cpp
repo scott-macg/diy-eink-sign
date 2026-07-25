@@ -11,7 +11,9 @@ void ConfigManager::resetToDefaults() {
     config.wifi_pass = WIFI_PASS;
     config.server_url = SERVER_URL;
     config.display_token = DISPLAY_TOKEN;
+    config.wifi_timeout_ms = WIFI_TIMEOUT_MS;
     config.default_sleep_sec = DEFAULT_SLEEP_SEC;
+    config.refresh_mode = REFRESH_MODE_DEFAULT;
     config.audio_battery_alert = AUDIO_BATTERY_ALERT_DEFAULT; // false by default
     config.developer_mode = DEVELOPER_MODE_DEFAULT; // false by default
     config.maintenance_timeout_sec = MAINTENANCE_TIMEOUT_SEC;
@@ -55,7 +57,9 @@ bool ConfigManager::load() {
     config.wifi_pass = doc["wifi_pass"] | WIFI_PASS;
     config.server_url = doc["server_url"] | SERVER_URL;
     config.display_token = doc["display_token"] | DISPLAY_TOKEN;
+    config.wifi_timeout_ms = doc["wifi_timeout_ms"] | WIFI_TIMEOUT_MS;
     config.default_sleep_sec = doc["default_sleep_sec"] | DEFAULT_SLEEP_SEC;
+    config.refresh_mode = doc["refresh_mode"] | REFRESH_MODE_DEFAULT;
     config.audio_battery_alert = doc["audio_battery_alert"] | AUDIO_BATTERY_ALERT_DEFAULT;
     config.developer_mode = doc["developer_mode"] | DEVELOPER_MODE_DEFAULT;
     config.maintenance_timeout_sec = doc["maintenance_timeout_sec"] | MAINTENANCE_TIMEOUT_SEC;
@@ -71,7 +75,9 @@ bool ConfigManager::save() {
     doc["wifi_pass"] = config.wifi_pass;
     doc["server_url"] = config.server_url;
     doc["display_token"] = config.display_token;
+    doc["wifi_timeout_ms"] = config.wifi_timeout_ms;
     doc["default_sleep_sec"] = config.default_sleep_sec;
+    doc["refresh_mode"] = config.refresh_mode;
     doc["audio_battery_alert"] = config.audio_battery_alert;
     doc["developer_mode"] = config.developer_mode;
     doc["maintenance_timeout_sec"] = config.maintenance_timeout_sec;
@@ -100,7 +106,9 @@ String ConfigManager::toJsonString() {
     doc["wifi_pass"] = "********"; // Mask password in public export
     doc["server_url"] = config.server_url;
     doc["display_token"] = config.display_token;
+    doc["wifi_timeout_ms"] = config.wifi_timeout_ms;
     doc["default_sleep_sec"] = config.default_sleep_sec;
+    doc["refresh_mode"] = config.refresh_mode;
     doc["audio_battery_alert"] = config.audio_battery_alert;
     doc["developer_mode"] = config.developer_mode;
     doc["maintenance_timeout_sec"] = config.maintenance_timeout_sec;
@@ -125,7 +133,15 @@ bool ConfigManager::updateFromJson(const String& jsonStr) {
     }
     if (doc["server_url"]) config.server_url = doc["server_url"].as<String>();
     if (doc["display_token"]) config.display_token = doc["display_token"].as<String>();
+    if (doc["wifi_timeout_ms"]) {
+        uint32_t v = doc["wifi_timeout_ms"].as<uint32_t>();
+        config.wifi_timeout_ms = constrain(v, 2000U, 120000U); // Clamp: 2s min, 120s max
+    }
     if (doc["default_sleep_sec"]) config.default_sleep_sec = doc["default_sleep_sec"].as<uint32_t>();
+    if (doc["refresh_mode"]) {
+        uint8_t v = doc["refresh_mode"].as<uint8_t>();
+        if (v <= 3) config.refresh_mode = v; // Only valid values 0-3 accepted
+    }
     if (doc["audio_battery_alert"]) config.audio_battery_alert = doc["audio_battery_alert"].as<bool>();
     if (doc["developer_mode"]) config.developer_mode = doc["developer_mode"].as<bool>();
     if (doc["maintenance_timeout_sec"]) config.maintenance_timeout_sec = doc["maintenance_timeout_sec"].as<uint32_t>();
@@ -139,7 +155,15 @@ bool ConfigManager::updateKey(const String& key, const String& val) {
     else if (key == "wifi_pass") config.wifi_pass = val;
     else if (key == "server_url") config.server_url = val;
     else if (key == "display_token") config.display_token = val;
+    else if (key == "wifi_timeout_ms") {
+        int v = val.toInt();
+        config.wifi_timeout_ms = (uint32_t)constrain(v, 2000, 120000); // Clamp: 2s min, 120s max
+    }
     else if (key == "default_sleep_sec") config.default_sleep_sec = val.toInt();
+    else if (key == "refresh_mode") {
+        int v = val.toInt();
+        if (v >= 0 && v <= 3) config.refresh_mode = (uint8_t)v; // Only valid values 0-3 accepted
+    }
     else if (key == "audio_battery_alert") config.audio_battery_alert = (val == "true" || val == "1");
     else if (key == "developer_mode") config.developer_mode = (val == "true" || val == "1");
     else if (key == "maintenance_timeout_sec") config.maintenance_timeout_sec = val.toInt();

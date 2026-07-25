@@ -55,7 +55,7 @@ This document contains step-by-step breadboard prototyping instructions and elec
 | **Reset Switch** | Leg 1 | Jumper | `RST` / `CHIP_PU` | CHIP_PU | Hardware Chip Reset |
 | **Reset Switch** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
 | **NPN Transistor Base** | Base Pin | 1kΩ Resistor | `D6` | GPIO 16 | PWM / PCM Audio Output |
-| **Speaker Positive** | Positive (`+`) | Red Wire | 5V Rail | - | 5V Power Supply |
+| **Speaker Positive** | Positive (`+`) | Red Wire | `3V3` (or `BAT+`) | - | 3.3V Power Supply (Note: XIAO 5V pin has 0V on battery power) |
 | **Speaker Negative** | Negative (`-`) | Black Wire | NPN Collector | - | Switch path through transistor to GND |
 | **Transistor Emitter** | Emitter Pin | Jumper Wire | `GND` | - | Common Ground |
 | **Battery Sense Divider** | `BAT+` -> `D0` -> `GND` | 2x 100kΩ Resistors | `D0` / `A0` | GPIO 0 | Analog Battery Voltage Sense (Divider Ratio 2.0) |
@@ -148,21 +148,24 @@ Connect the 8-pin display harness directly into the XIAO pins or breadboard rows
 7. `RST` -> Connect to XIAO `D3` (Row corresponding to pin 4).
 8. `BUSY`-> Connect to XIAO `D4` (Row corresponding to pin 5).
 
-### Step 4: Add Tactile Pushbuttons
-1. **Boot / Force-Refresh Switch (`D9`):**
-   - Insert button across center divider or unused rows.
-   - Terminal A -> Connect to XIAO `D9` (Pin 9).
-   - Terminal B -> Connect to `GND` power rail.
-2. **Hardware Reset Switch (`RST`):**
-   - Terminal A -> Connect to XIAO `RST` pad / header pin.
-   - Terminal B -> Connect to `GND` power rail.
+### Step 4: Add Tactile Pushbuttons & Hardware Interface Controls
+1. **Top Interactive Action / Screen-Cycle Microswitch (`D9` / `GPIO 9`):**
+   - **Physical Placement:** Mounted facing the **top of the unit** with a **raised button** for easy daily access.
+   - **Wiring:** Terminal A -> Connect to XIAO `D9` (Pin 9 / GPIO 9); Terminal B -> Connect to `GND`.
+   - **Interaction Modes:**
+     - **Short Press:** Wakes device from deep sleep, sends `X-Display-Action: cycle` header to backend (bypassing 304 cache) to cycle to the next screen/quote of the day, updates display, and re-enters sleep.
+     - **Long Press (>400ms):** Enters **Maintenance Mode** (starts Web Server & WebSockets REPL for file uploads and config changes).
+2. **Back Recessed Reset Microswitch (`RST` / `CHIP_PU`):**
+   - **Physical Placement:** Mounted on the **back panel**, recessed behind a small pinhole aperture to prevent accidental presses.
+   - **Wiring:** Terminal A -> Connect to XIAO `RST` / `CHIP_PU` pad; Terminal B -> Connect to `GND`.
+   - **Function:** Hard system chip reset.
 
 ### Step 5: Add 20mm Speaker & NPN Transistor Driver
 1. Connect NPN Transistor **Emitter** (`E`) to `GND` rail.
 2. Connect a **1kΩ Resistor** between XIAO `D6` (Pin 12 / GPIO 16) and NPN Transistor **Base** (`B`).
 3. Connect NPN Transistor **Collector** (`C`) to Speaker negative (`-`) lead.
-4. Connect Speaker positive (`+`) lead to `5V` power rail.
-5. Place a **Flyback Diode** (1N4148/1N4001) in parallel across speaker leads (Cathode to `5V`, Anode to Collector).
+4. Connect Speaker positive (`+`) lead to `3V3` (or `BAT+`) power rail *(Note: On XIAO ESP32-C6, the `5V` pin is disconnected during untethered battery power)*.
+5. Place a **Flyback Diode** (1N4148/1N4001) in parallel across speaker leads (Cathode to `3V3`/`BAT+`, Anode to Collector).
 
 ---
 

@@ -1,0 +1,13 @@
+{
+  "wifi_ssid": "YOUR_WIFI_SSID",
+  "wifi_pass": "YOUR_WIFI_PASSWORD",
+  "server_url": "https://your-app-name.onrender.com/get/",
+  "display_token": "YOUR_SECRET_TOKEN",
+  "wifi_timeout_ms": 15000,
+  "default_sleep_sec": 3600,
+  "refresh_mode": 3,
+  "audio_battery_alert": false,
+  "developer_mode": false,
+  "maintenance_timeout_sec": 300,
+  "config_version": 1
+}
