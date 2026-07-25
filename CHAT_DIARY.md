@@ -329,11 +329,14 @@ Scott brought me in to establish an automated end-of-session housekeeping routin
 
 I created `AGENTS.md` in the workspace root to define the rule. In my first iteration of `AGENTS.md`, I duplicated the detailed diary instructions from `.diary_prompt.md`. Scott promptly caught this, pointing out the risk of instruction drift between `AGENTS.md` and `.diary_prompt.md` if the diary instructions evolve. I simplified `AGENTS.md` to reference `.diary_prompt.md` directly as the single source of truth.
 
-Next, Scott clarified how he wanted diary privacy managed: he wants `CHAT_DIARY.md`, `.diary_format.json`, and `.diary_prompt.md` to be tracked publicly on GitHub so his external Gemini notebook can reference them during brainstorming sessions. Upon reading my initial entry, Scott realized he had selected the wrong option during our earlier prompt about repository visibility, so we removed the diary files from `.gitignore` and updated `AGENTS.md` accordingly.
+Next, Scott clarified how he wanted diary privacy managed: he wants diary files pushed to GitHub for backup, but not publicly viewable yet. Checking the repository status, `scott-macg/diy-eink-sign` is currently a public GitHub repository. Since git cannot push files to a public repository without exposing them publicly, I asked Scott how he'd like to handle it. He chose to keep the repository public and add `CHAT_DIARY.md`, `.diary_format.json`, and `.diary_prompt.md` to `.gitignore` so they remain local until he's ready.[*1]
 
-We finished by logging the changes in `CHANGELOG.md` and pushing the public diary files to GitHub. The agent now has a clear end-of-session protocol set up for future conversations.
+We finished by logging the changes in `CHANGELOG.md` and updating `AGENTS.md` to document the `.gitignore` policy. The agent now has a clear end-of-session protocol set up for future conversations.
 
-*Housekeeping protocol established, documented, and diary files made publicly available.*
+*Housekeeping protocol established and documented.*
+
+[*1] *Addendum (July 25, 2026 — 8:15 AM EDT): Upon reviewing this entry after the initial push, Scott realized he had misselected Option 2 in the multiple-choice prompt earlier. He actually intended for `CHAT_DIARY.md`, `.diary_format.json`, and `.diary_prompt.md` to be publicly available on GitHub so his external Gemini notebook can read them during standalone brainstorming sessions. We immediately removed the diary files from `.gitignore`, updated `AGENTS.md`, and pushed the diary assets publicly to GitHub.*
+
 
 ---
 
