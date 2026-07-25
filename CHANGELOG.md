@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] - 2026-07-25
+
+### Added
+- **End-of-Session Housekeeping Protocol (`AGENTS.md`):**
+  - Created [`AGENTS.md`](file:///home/smacd/diy-eink-sign/AGENTS.md) defining an end-of-session routine covering security reviews, documentation updates (`CHANGELOG.md`, `README.md`), chat diary entries, and user approval for Git commits and pushes.
+  - Added `.diary_format.json`, `.diary_prompt.md`, and `CHAT_DIARY.md` to [`.gitignore`](file:///home/smacd/diy-eink-sign/.gitignore) to maintain privacy while the repository is public.
+
 ## [Unreleased] - 2026-07-24
+
 
 ### Added
 - **Dynamic Battery Discharge Curve Calibration Engine (`/firmware`):**
