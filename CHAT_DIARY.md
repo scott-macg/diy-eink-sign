@@ -372,6 +372,23 @@ Finally, I refactored the ESP32-C6 firmware in Phase 3. I introduced `manifest_m
 
 [*1] *Addendum (July 25, 2026 — 11:05 AM EDT): Scott updated `AGENTS.md` to add two project guidelines: (1) update `plan.md` whenever major architectural changes occur, and (2) tailor agent communication to Scott's CS/coding experience level—explaining technical decisions through best practices and modern standards while remaining ready to dive into detailed explanations upon request. I updated `plan.md` with the v0.2.0 overhaul architecture details accordingly.*
 
+---
+
+## July 29, 2026 — 10:57 AM (EDT)
+
+**Author:** Gemini 3.6 Flash (High)
+
+Dear diary,
+
+Scott jumped into the chat working directly on the physical hardware wiring of his 30x70mm perf-board prototype, testing power rails and battery sensing with a multimeter. He ran into an intriguing initial anomaly: measuring resistance across the unpowered battery jack leads showed ~1.5 MΩ. We discussed how semiconductor junction leakage and high-Z shutdown states on the Seeed Studio XIAO ESP32-C6's onboard LiPo charger IC make this high-impedance reading completely normal and expected, confirming no direct power shorts to ground.
+
+Next, Scott ran our MicroPython discharge profiler ([`utils/battery_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_profiler.py)) and was surprised to see it reporting a battery voltage of `7.162V` without a battery attached, and `7.208V` (with `4.08V` at `D0` / `GPIO 0`) after plugging in a 4.17V battery. I walked him through the exact ADC math: `7.162V` is $3.581\text{V} \times 2.0$, which is the exact upper saturation limit of MicroPython's `adc.read_uv()` on the ESP32-C6 when a pin exceeds ~3.1V! A reading of 4.08V directly on `D0` pointed straight to a hardware culprit: the bottom 100kΩ resistor (between `D0` and `GND`) was ungrounded on his perf-board layout. Scott grabbed his solder wick, re-worked the perf-board traces into a clean 3-node divider (`BAT+` $\rightarrow$ 100k $\rightarrow$ `D0` $\rightarrow$ 100k $\rightarrow$ `GND`), and confirmed that `D0` immediately dropped to ~2.08V (half of battery voltage) and unpowered resistance from 3.3V/5V to GND measured ~100kΩ.
+
+With the hardware fixed, we upgraded [`utils/battery_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_profiler.py). Since Scott didn't have the speaker driver attached while running untethered on battery power, he needed a way to visually verify the MCU was alive and profiling. We integrated the onboard yellow user LED (`GPIO 15`) with a 2-second double-pulse heartbeat pattern (*lub-dub*) during sleep intervals and a 3-burst flash when writing LittleFS samples. We also wrapped the script in a top-level `KeyboardInterrupt` handler for instant `Ctrl-C` halts, added an animated live heartbeat spinner to the terminal, fixed a MicroPython `AttributeError` on `sys.stdout.flush()`, and adjusted `FULL_CHARGE_VOLTAGE` from 4.18V to 4.14V to match his battery charger's real termination voltage (~4.148V). The profiler is now running smoothly on untethered battery power!
+
+*Hardware debugging successful: perf-board divider re-soldered, ADC saturation resolved, and MicroPython profiler upgraded with visual LED heartbeat signals.*
+
+
 
 
 

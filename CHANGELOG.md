@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] - 2026-07-29
+
+### Added & Improved
+- **MicroPython Battery Discharge Profiler Upgrade (`/utils`):**
+  - Upgraded [`utils/battery_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_profiler.py) with top-level `KeyboardInterrupt` handling (`Ctrl-C`) for graceful execution halt, automatic data buffer flushing to LittleFS, and exit fanfare.
+  - Added live animated console heartbeat spinner and onboard User LED (`GPIO 15`) status patterns: 2-second double-pulse (*lub-dub*) heartbeat for untethered battery tracking and 3-burst flash when recording samples to LittleFS.
+  - Adjusted `FULL_CHARGE_VOLTAGE` threshold to `4.14V` to align with physical LiPo charger termination voltage.
+- **Custom Agent Skills Refactoring (`.agents/skills`):**
+  - Refactored project rules in [`AGENTS.md`](file:///home/smacd/diy-eink-sign/AGENTS.md) into a standalone project skill [`wrapup-routine`](file:///.agents/skills/wrapup-routine/SKILL.md), eliminating per-prompt instruction bloat.
+
+### Fixed
+- **MicroPython Compatibility (`/utils`):**
+  - Handled `AttributeError` on `sys.stdout.flush()` in [`utils/battery_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_profiler.py) for MicroPython stream compatibility.
+- **Hardware Debugging & Perf-Board Divider Rework:**
+  - Diagnosed ungrounded bottom 100kΩ resistor on the 30x70mm perf-board causing ADC pin saturation (`7.208V` / `4.08V` at `D0`). Guided 3-node rewiring to restore proper 1:2 division ($4.17\text{V} \rightarrow 2.08\text{V}$ at `D0`).
+
 ## [v0.2.0] - 2026-07-25
 
 ### Added & Refactored (Architecture Overhaul)
