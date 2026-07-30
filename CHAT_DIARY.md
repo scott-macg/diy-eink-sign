@@ -388,6 +388,22 @@ With the hardware fixed, we upgraded [`utils/battery_profiler.py`](file:///home/
 
 *Hardware debugging successful: perf-board divider re-soldered, ADC saturation resolved, and MicroPython profiler upgraded with visual LED heartbeat signals.*
 
+---
+
+## July 29, 2026 — 8:07 PM (EDT)
+**Author:** Gemini 3.6 Flash (High)
+
+Dear diary,
+
+Scott kicked off this session asking if we could generate clear schematic diagrams for his speaker circuit, as he finds ASCII art schematics hard to read during hardware assembly. I created a dedicated vector SVG diagram ([`schematics/speaker_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/speaker_schematic.svg)) showing the XIAO ESP32-C6 `D6` (`GPIO 16`) output driving a 2N2222/2N3904 NPN transistor switch with a 1kΩ base resistor and a 1N4148 flyback diode protecting the 20mm 8Ω speaker coil. Scott loved the clean vector look and asked me to create separate SVG schematics for all the remaining hardware modules: the battery charging and 2x 100kΩ ADC voltage divider ([`schematics/battery_sensing_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/battery_sensing_schematic.svg)), the 8-wire display SPI harness ([`schematics/display_mcu_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/display_mcu_schematic.svg)), and the tactile microswitch breakouts for force-refresh and hard chip reset ([`schematics/microswitch_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/microswitch_schematic.svg)). When Scott noticed the SVG files weren't rendering in his markdown viewer, I realized I had originally saved them in my temporary session artifact folder rather than the workspace repository! I organized them into a permanent [`schematics/`](file:///home/smacd/diy-eink-sign/schematics/) folder in the workspace root along with [`schematics/README.md`](file:///home/smacd/diy-eink-sign/schematics/README.md) and updated [`breadboard_wiring.md`](file:///home/smacd/diy-eink-sign/breadboard_wiring.md) to render them directly.
+
+Next, we turned our attention to the battery discharge profiling results. Scott noticed a peculiar bug in the auto-generated C++ curve array where 100% and 0% were showing the exact same voltage (`4085` / 4.085V). I dug into the generator math in [`utils/battery_web_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_web_profiler.py) and discovered a subtle logic flaw: the initial version used a cumulative forward minimum loop (`curr_min = min(curr_min, v)`). Because the MCU experienced a brief startup voltage sag down to 4.085V during its initial Wi-Fi connection, `curr_min` latched onto 4.085V on sample #3 and clamped every subsequent sample across the entire dataset to 4.085V! I overhauled `generate_cpp_code()` by adding a 3-minute startup guard to discard boot transients and replacing cumulative min with a 9-sample moving median filter.
+
+Once Scott synced his updated `battery_curve.csv` containing **6.8 hours of untethered profiling data (815 samples)**, I built a Python analysis script ([`utils/generate_curve_table.py`](file:///home/smacd/diy-eink-sign/utils/generate_curve_table.py)) to process the dataset. The empirical data smoothly covered the upper 100% down to 70% capacity range (4.150V down to 3.939V). I blended these empirical readings with standard LiPo discharge chemistry curves for the remaining 60% down to 0% range (3.840V down to 3.300V) to create a clean, monotonic 11-point calibration curve. Finally, I updated the C++ firmware files ([`firmware/src/battery_curve.cpp`](file:///home/smacd/diy-eink-sign/firmware/src/battery_curve.cpp), [`firmware/data/battery_curve.csv`](file:///home/smacd/diy-eink-sign/firmware/data/battery_curve.csv), and [`firmware/data/battery_curve.example.csv`](file:///home/smacd/diy-eink-sign/firmware/data/battery_curve.example.csv)) with the calibrated hybrid values. Scott is planning to finish wiring up the e-paper display before our next session so we can run real-world display refresh power drain tests!
+
+*Modular vector SVG schematics created, cumulative min curve bug fixed, 6.8h profiling dataset processed, and C++ firmware battery calibration updated.*
+
+
 
 
 

@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%" style="background-color: #ffffff; font-family: system-ui, -apple-system, sans-serif;">
+  <defs>
+    <style>
+      .wire { stroke: #1e293b; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .power-wire { stroke: #dc2626; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .gnd-wire { stroke: #1e293b; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .signal-wire { stroke: #2563eb; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .symbol { stroke: #0f172a; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .node { fill: #0f172a; }
+      .text-title { font-size: 20px; font-weight: 700; fill: #0f172a; }
+      .text-sub { font-size: 13px; fill: #64748b; }
+      .text-label { font-size: 14px; font-weight: 600; fill: #0f172a; }
+      .text-val { font-size: 13px; font-style: italic; fill: #475569; }
+      .text-pin { font-size: 12px; font-weight: 700; fill: #2563eb; }
+      .text-power { font-size: 14px; font-weight: 700; fill: #dc2626; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 6px; }
+      .highlight-box { fill: #eff6ff; stroke: #93c5fd; stroke-width: 1.5; rx: 8px; }
+    </style>
+  </defs>
+
+  <!-- Background Card -->
+  <rect x="20" y="20" width="760" height="460" class="box" />
+  <text x="40" y="55" class="text-title">NPN Transistor Speaker Driver Circuit Schematic</text>
+  <text x="40" y="75" class="text-sub">DIY 2.9" E-Ink Sign • 8Ω Dynamic Speaker Driver with Flyback Protection</text>
+
+  <!-- Power Rail (+3.3V / BAT+) -->
+  <line x1="500" y1="120" x2="680" y2="120" class="power-wire" />
+  <circle cx="600" cy="120" r="4" fill="#dc2626" />
+  <text x="600" y="105" text-anchor="middle" class="text-power">3V3 / BAT+</text>
+  <text x="600" y="88" text-anchor="middle" class="text-sub">(Power Rail)</text>
+
+  <!-- MCU Pin Block -->
+  <rect x="40" y="240" width="180" height="70" class="highlight-box" />
+  <text x="130" y="265" text-anchor="middle" class="text-label">XIAO ESP32-C6</text>
+  <text x="130" y="285" text-anchor="middle" class="text-pin">Pin D6 (GPIO 16)</text>
+  <text x="130" y="300" text-anchor="middle" class="text-sub">PCM / PWM Audio Out</text>
+
+  <!-- Wire from D6 to R1 -->
+  <line x1="220" y1="275" x2="265" y2="275" class="signal-wire" />
+
+  <!-- Resistor R1 (1kΩ) -->
+  <g>
+    <polyline points="265,275 275,275 280,263 290,287 300,263 310,287 320,263 330,287 335,275 345,275" class="symbol" />
+    <text x="305" y="250" text-anchor="middle" class="text-label">R1</text>
+    <text x="305" y="305" text-anchor="middle" class="text-val">1 kΩ (1/4W)</text>
+  </g>
+
+  <!-- Wire from R1 to Transistor Base -->
+  <line x1="345" y1="275" x2="410" y2="275" class="wire" />
+  <text x="392" y="267" class="text-pin">B (Base)</text>
+
+  <!-- Transistor Q1 (NPN 2N2222 / 2N3904) -->
+  <g>
+    <!-- Base Bar -->
+    <line x1="410" y1="250" x2="410" y2="300" stroke="#0f172a" stroke-width="4" stroke-linecap="round" />
+    <!-- Collector Lead -->
+    <line x1="410" y1="260" x2="440" y2="230" class="symbol" />
+    <line x1="440" y1="230" x2="440" y2="200" class="wire" />
+    <text x="448" y="222" class="text-pin">C (Collector)</text>
+
+    <!-- Emitter Lead with Arrow -->
+    <line x1="410" y1="290" x2="432" y2="312" class="symbol" />
+    <polygon points="440,320 428,314 434,308" fill="#0f172a" />
+    <line x1="440" y1="320" x2="440" y2="360" class="gnd-wire" />
+    <text x="448" y="338" class="text-pin">E (Emitter)</text>
+
+    <!-- Circle outline around transistor -->
+    <circle cx="422" cy="275" r="32" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3" fill="none" />
+
+    <text x="468" y="270" class="text-label">Q1</text>
+    <text x="468" y="286" class="text-val">2N2222 / 2N3904</text>
+    <text x="468" y="302" class="text-sub">(NPN Transistor)</text>
+  </g>
+
+  <!-- Ground Connection for Emitter -->
+  <g>
+    <line x1="440" y1="360" x2="440" y2="385" class="gnd-wire" />
+    <!-- Ground Symbol -->
+    <line x1="420" y1="385" x2="460" y2="385" stroke="#0f172a" stroke-width="3" stroke-linecap="round" />
+    <line x1="428" y1="392" x2="452" y2="392" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="434" y1="399" x2="446" y2="399" stroke="#0f172a" stroke-width="2" stroke-linecap="round" />
+    <line x1="438" y1="405" x2="442" y2="405" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round" />
+    <text x="440" y="425" text-anchor="middle" class="text-label">GND</text>
+  </g>
+
+  <!-- Collector Junction Point (Node) -->
+  <circle cx="440" cy="200" r="4" class="node" />
+
+  <!-- Parallel Branch: Flyback Diode (Left) & Speaker (Right) -->
+  <!-- Wire from Collector Node left to Diode Branch -->
+  <line x1="440" y1="200" x2="540" y2="200" class="wire" />
+  <line x1="540" y1="200" x2="540" y2="180" class="wire" />
+  <circle cx="540" cy="200" r="4" class="node" />
+
+  <!-- Wire from Collector Node right to Speaker Branch -->
+  <line x1="440" y1="200" x2="660" y2="200" class="wire" />
+  <line x1="660" y1="200" x2="660" y2="180" class="wire" />
+
+  <!-- Flyback Diode D1 (1N4148) in Vertical position -->
+  <g>
+    <line x1="540" y1="180" x2="540" y2="165" class="wire" />
+    <!-- Triangle pointing UP -->
+    <polygon points="540,145 528,165 552,165" class="symbol" fill="#0f172a" />
+    <!-- Cathode Bar at top -->
+    <line x1="526" y1="145" x2="554" y2="145" stroke="#0f172a" stroke-width="3" stroke-linecap="round" />
+    <line x1="540" y1="145" x2="540" y2="120" class="wire" />
+    <circle cx="540" cy="120" r="4" class="node" />
+
+    <text x="505" y="152" text-anchor="end" class="text-label">D1</text>
+    <text x="505" y="167" text-anchor="end" class="text-val">1N4148</text>
+    <text x="505" y="182" text-anchor="end" class="text-sub">Flyback Diode</text>
+    <text x="558" y="142" class="text-pin">Cathode (Stripe)</text>
+    <text x="558" y="172" class="text-pin">Anode</text>
+  </g>
+
+  <!-- Speaker SPK1 (20mm 8Ω) in Vertical position -->
+  <g>
+    <line x1="660" y1="180" x2="660" y2="170" class="wire" />
+
+    <!-- Speaker symbol body -->
+    <!-- Coil/Box section -->
+    <rect x="648" y="150" width="24" height="20" stroke="#0f172a" stroke-width="2.5" fill="#ffffff" />
+    <!-- Cone section -->
+    <polygon points="672,150 672,170 692,182 692,138" stroke="#0f172a" stroke-width="2.5" fill="#f1f5f9" />
+
+    <line x1="660" y1="150" x2="660" y2="120" class="wire" />
+    <circle cx="660" cy="120" r="4" class="node" />
+
+    <text x="702" y="152" class="text-label">SPK1</text>
+    <text x="702" y="167" class="text-val">20mm 8Ω Speaker</text>
+
+    <!-- Polarity markers -->
+    <text x="642" y="132" class="text-power">+</text>
+    <text x="642" y="195" class="text-label">-</text>
+  </g>
+
+  <!-- Explanatory Callout Box at Bottom Left -->
+  <rect x="40" y="340" width="350" height="120" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" rx="6" />
+  <text x="55" y="362" font-size="13" font-weight="700" fill="#1e293b">Circuit Operation &amp; Key Details:</text>
+  <text x="55" y="382" font-size="12" fill="#475569">• <tspan font-weight="600">NPN Switch:</tspan> GPIO 16 HIGH turns Q1 ON, pulling Speaker (-)</text>
+  <text x="65" y="397" font-size="12" fill="#475569">to GND to drive current through speaker coil.</text>
+  <text x="55" y="415" font-size="12" fill="#475569">• <tspan font-weight="600">Flyback Diode (D1):</tspan> Recirculates inductive kickback spikes</text>
+  <text x="65" y="430" font-size="12" fill="#475569">when Q1 switches OFF, protecting the transistor.</text>
+  <text x="55" y="448" font-size="12" font-weight="600" fill="#dc2626">• Power Rail Note: Use 3V3 rail (or BAT+) for battery operation.</text>
+</svg>

@@ -10,21 +10,21 @@ void BatteryCurveManager::createDefaultCsv() {
         Serial.println("[BATTCURVE] Failed to create default battery_curve.csv");
         return;
     }
-    // Flat linear baseline placeholder curve
+    // Calibrated hybrid battery curve (empirical 6.8h profiling + LiPo model)
     f.println("voltage,percent");
-    f.println("4.20,100");
-    f.println("4.11,90");
-    f.println("4.02,80");
-    f.println("3.93,70");
+    f.println("4.15,100");
+    f.println("4.08,90");
+    f.println("4.01,80");
+    f.println("3.94,70");
     f.println("3.84,60");
-    f.println("3.75,50");
-    f.println("3.66,40");
-    f.println("3.57,30");
-    f.println("3.48,20");
-    f.println("3.39,10");
+    f.println("3.79,50");
+    f.println("3.75,40");
+    f.println("3.70,30");
+    f.println("3.65,20");
+    f.println("3.52,10");
     f.println("3.30,0");
     f.close();
-    Serial.println("[BATTCURVE] Created default placeholder battery_curve.csv in LittleFS");
+    Serial.println("[BATTCURVE] Created calibrated battery_curve.csv in LittleFS");
 }
 
 bool BatteryCurveManager::begin() {

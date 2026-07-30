@@ -167,6 +167,22 @@ Connect the 8-pin display harness directly into the XIAO pins or breadboard rows
 4. Connect Speaker positive (`+`) lead to `3V3` (or `BAT+`) power rail *(Note: On XIAO ESP32-C6, the `5V` pin is disconnected during untethered battery power)*.
 5. Place a **Flyback Diode** (1N4148/1N4001) in parallel across speaker leads (Cathode to `3V3`/`BAT+`, Anode to Collector).
 
+#### Speaker Circuit Schematic Diagram
+![Speaker Driver Schematic](./schematics/speaker_schematic.svg)
+
+---
+
+## Modular Vector Schematic Diagrams
+
+For standalone, full-resolution circuit diagrams, see the [`schematics/`](./schematics/README.md) directory:
+
+1. **[Speaker Driver Circuit Schematic](./schematics/speaker_schematic.svg)**
+2. **[Battery Charging & Voltage Sensing Schematic](./schematics/battery_sensing_schematic.svg)**
+3. **[E-Paper Display SPI Harness Schematic](./schematics/display_mcu_schematic.svg)**
+4. **[Microswitch Breakouts Schematic](./schematics/microswitch_schematic.svg)**
+
+
+
 ---
 
 ## 6. Follow-on Perf-Board Layout & Planning (30x70mm)

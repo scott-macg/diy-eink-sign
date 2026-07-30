@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - 2026-07-29
 
 ### Added & Improved
+- **Modular Hardware Vector SVG Schematics (`/schematics`):**
+  - Created standalone vector SVG schematics for all 4 functional hardware sub-systems in `schematics/`: [`speaker_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/speaker_schematic.svg), [`battery_sensing_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/battery_sensing_schematic.svg), [`display_mcu_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/display_mcu_schematic.svg), and [`microswitch_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/microswitch_schematic.svg).
+  - Created master schematics guide [`schematics/README.md`](file:///home/smacd/diy-eink-sign/schematics/README.md) and updated [`breadboard_wiring.md`](file:///home/smacd/diy-eink-sign/breadboard_wiring.md) to render SVG schematics directly.
+- **Empirical Battery Profiling & C++ Calibration (`/utils` & `/firmware`):**
+  - Processed 6.8 hours of untethered profiling data (815 samples) from [`utils/battery_curve.csv`](file:///home/smacd/diy-eink-sign/utils/battery_curve.csv).
+  - Added standalone analysis script [`utils/generate_curve_table.py`](file:///home/smacd/diy-eink-sign/utils/generate_curve_table.py) for noise reduction and C++ curve array generation.
+  - Updated C++ firmware files ([`firmware/src/battery_curve.cpp`](file:///home/smacd/diy-eink-sign/firmware/src/battery_curve.cpp), [`firmware/data/battery_curve.csv`](file:///home/smacd/diy-eink-sign/firmware/data/battery_curve.csv), and [`firmware/data/battery_curve.example.csv`](file:///home/smacd/diy-eink-sign/firmware/data/battery_curve.example.csv)) with calibrated hybrid battery curve values ($4.15\text{V} \rightarrow 100\%$ down to $3.30\text{V} \rightarrow 0\%$).
 - **MicroPython Battery Discharge Profiler Upgrade (`/utils`):**
   - Upgraded [`utils/battery_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_profiler.py) with top-level `KeyboardInterrupt` handling (`Ctrl-C`) for graceful execution halt, automatic data buffer flushing to LittleFS, and exit fanfare.
   - Added live animated console heartbeat spinner and onboard User LED (`GPIO 15`) status patterns: 2-second double-pulse (*lub-dub*) heartbeat for untethered battery tracking and 3-burst flash when recording samples to LittleFS.
@@ -18,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Refactored project rules in [`AGENTS.md`](file:///home/smacd/diy-eink-sign/AGENTS.md) into a standalone project skill [`wrapup-routine`](file:///.agents/skills/wrapup-routine/SKILL.md), eliminating per-prompt instruction bloat.
 
 ### Fixed
+- **Battery Profiler Generator Bug (`/utils`):**
+  - Fixed cumulative minimum latching bug in `generate_cpp_code()` in [`utils/battery_web_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_web_profiler.py) that caused identical voltage values across all percentages. Added startup transient guard ($t \ge 180\text{s}$) and 9-sample moving median filtering.
 - **MicroPython Compatibility (`/utils`):**
   - Handled `AttributeError` on `sys.stdout.flush()` in [`utils/battery_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_profiler.py) for MicroPython stream compatibility.
 - **Hardware Debugging & Perf-Board Divider Rework:**

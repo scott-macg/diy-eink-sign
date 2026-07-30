@@ -14,7 +14,7 @@ BAT_DIVIDER_RATIO = 2.0   # 1:2 resistor divider (2x 100k)
 FULL_CHARGE_VOLTAGE = 4.14 # Voltage threshold to consider battery full
 CUTOFF_VOLTAGE = 3.20      # Safe low-voltage shutdown threshold (Volts)
 SAMPLE_INTERVAL_SEC = 30   # Take a sample every 30 seconds
-FLUSH_EVERY_N = 10        # Flush buffer to flash every 10 samples (5 mins)
+FLUSH_EVERY_N = 1         # Flush to LittleFS on EVERY sample to prevent data loss!
 LOG_FILE = "battery_curve.csv"
 
 # Configure Hardware
@@ -159,15 +159,21 @@ try:
     print("   Zelda Battery Discharge Profiler      ")
     print("==========================================")
     print(" -> Heartbeat LED on GPIO 15 active.")
+    print(" -> Data flushed to LittleFS after EVERY sample.")
     print(" -> Press Ctrl-C at any time to stop execution gracefully.\n")
 
     # --- Phase 1: Wait for Full Charge (Plugged into USB) ---
     print("[PHASE 1] Monitoring Charge... Connect USB to charge battery.")
+    print(" -> Unplug USB at any time to automatically start discharge test!")
     last_announcement = 0
+    peak_voltage = 0.0
 
     while True:
         v_adc, v_bat = read_battery_voltage()
         print(f" -> Current Voltage: {v_bat:.3f}V (Target: >={FULL_CHARGE_VOLTAGE}V)")
+        
+        if v_bat > peak_voltage:
+            peak_voltage = v_bat
         
         if v_bat >= FULL_CHARGE_VOLTAGE:
             now = time.time()
@@ -176,8 +182,14 @@ try:
                 last_announcement = now
                 print(" -> [FULL CHARGE] Unplug USB cable to automatically start discharge test!")
         
-        if last_announcement > 0 and v_bat < (FULL_CHARGE_VOLTAGE - 0.05):
-            print("\n⚡ USB Disconnected! Battery fully charged. Starting discharge test...")
+        # Transition to Phase 2 automatically if:
+        # 1. Full charge reached and USB unplugged (voltage drops slightly below full charge threshold)
+        # 2. USB was unplugged during monitoring (voltage drops by >0.03V from peak)
+        # 3. Started already untethered on battery power (voltage below full charge threshold)
+        if (last_announcement > 0 and v_bat < (FULL_CHARGE_VOLTAGE - 0.04)) or \
+           (peak_voltage > 3.8 and v_bat < (peak_voltage - 0.03)) or \
+           (peak_voltage == 0.0 and v_bat < FULL_CHARGE_VOLTAGE):
+            print("\n⚡ USB Disconnected / Battery Power Detected! Starting discharge test...")
             break
             
         responsive_sleep(5, status_prefix=" 🔌 Charging...")
@@ -211,11 +223,11 @@ try:
             print(f"\n[CUTOFF] Voltage reached {v_bat:.2f}V! Ending test.")
             break
             
+        # Flush every sample immediately to LittleFS so no data is lost if power drops!
         if len(buffer) >= FLUSH_EVERY_N:
             with open(LOG_FILE, "a") as f:
                 f.writelines(buffer)
             buffer.clear()
-            print(" -> Data buffer saved to LittleFS.")
 
         # Run synthetic CPU load & pause remainder of interval
         run_synthetic_load(duration_ms=3000)

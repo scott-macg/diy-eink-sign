@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 540" width="100%" height="100%" style="background-color: #ffffff; font-family: system-ui, -apple-system, sans-serif;">
+  <defs>
+    <style>
+      .wire-pwr { stroke: #dc2626; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .wire-gnd { stroke: #1e293b; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .wire-mosi { stroke: #eab308; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .wire-sck { stroke: #f97316; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .wire-cs { stroke: #64748b; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .wire-dc { stroke: #16a34a; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .wire-rst { stroke: #9333ea; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .wire-busy { stroke: #475569; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      
+      .text-title { font-size: 20px; font-weight: 700; fill: #0f172a; }
+      .text-sub { font-size: 13px; fill: #64748b; }
+      .text-label { font-size: 14px; font-weight: 600; fill: #0f172a; }
+      .text-val { font-size: 13px; font-style: italic; fill: #475569; }
+      .text-pin { font-size: 12px; font-weight: 700; }
+      
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 6px; }
+      .mcu-box { fill: #f0f9ff; stroke: #0284c7; stroke-width: 1.5; rx: 8px; }
+      .disp-box { fill: #f8fafc; stroke: #475569; stroke-width: 1.5; rx: 8px; }
+    </style>
+  </defs>
+
+  <!-- Background Card -->
+  <rect x="20" y="20" width="810" height="500" class="box" />
+  <text x="40" y="55" class="text-title">E-Paper Display to MCU SPI Interface Schematic</text>
+  <text x="40" y="75" class="text-sub">DIY 2.9" E-Ink Sign • WeAct Studio 2.9" 3-Color Display 8-Pin Harness Interconnect</text>
+
+  <!-- Left: XIAO ESP32-C6 MCU Block -->
+  <rect x="40" y="110" width="240" height="380" class="mcu-box" />
+  <text x="160" y="140" text-anchor="middle" class="text-label" fill="#0369a1">Seeed Studio XIAO ESP32-C6</text>
+  <text x="160" y="158" text-anchor="middle" class="text-sub">SPI Master Host</text>
+
+  <!-- MCU Pin Labels -->
+  <!-- 1. 3V3 (y=190) -->
+  <rect x="180" y="175" width="85" height="28" fill="#fef2f2" stroke="#fca5a5" rx="4" />
+  <text x="222" y="194" text-anchor="middle" class="text-pin" fill="#dc2626">3V3 (Pin 7)</text>
+
+  <!-- 2. GND (y=230) -->
+  <rect x="180" y="215" width="85" height="28" fill="#f1f5f9" stroke="#cbd5e1" rx="4" />
+  <text x="222" y="234" text-anchor="middle" class="text-pin" fill="#0f172a">GND (Pin 13)</text>
+
+  <!-- 3. D10 / GPIO 18 MOSI (y=270) -->
+  <rect x="160" y="255" width="105" height="28" fill="#fefce8" stroke="#fef08a" rx="4" />
+  <text x="212" y="274" text-anchor="middle" class="text-pin" fill="#854d0e">D10 (GPIO 18)</text>
+
+  <!-- 4. D8 / GPIO 19 SCK (y=310) -->
+  <rect x="160" y="295" width="105" height="28" fill="#fff7ed" stroke="#ffedd5" rx="4" />
+  <text x="212" y="314" text-anchor="middle" class="text-pin" fill="#c2410c">D8 (GPIO 19)</text>
+
+  <!-- 5. D1 / GPIO 1 CS (y=350) -->
+  <rect x="160" y="335" width="105" height="28" fill="#f8fafc" stroke="#e2e8f0" rx="4" />
+  <text x="212" y="354" text-anchor="middle" class="text-pin" fill="#334155">D1 (GPIO 1)</text>
+
+  <!-- 6. D2 / GPIO 2 DC (y=390) -->
+  <rect x="160" y="375" width="105" height="28" fill="#f0fdf4" stroke="#bbf7d0" rx="4" />
+  <text x="212" y="394" text-anchor="middle" class="text-pin" fill="#15803d">D2 (GPIO 2)</text>
+
+  <!-- 7. D3 / GPIO 21 RST (y=430) -->
+  <rect x="160" y="415" width="105" height="28" fill="#faf5ff" stroke="#f3e8ff" rx="4" />
+  <text x="212" y="434" text-anchor="middle" class="text-pin" fill="#6b21a8">D3 (GPIO 21)</text>
+
+  <!-- 8. D4 / GPIO 22 BUSY (y=470) -->
+  <rect x="160" y="455" width="105" height="28" fill="#f8fafc" stroke="#cbd5e1" rx="4" />
+  <text x="212" y="474" text-anchor="middle" class="text-pin" fill="#475569">D4 (GPIO 22)</text>
+
+  <!-- Right: WeAct E-Paper Display Module Block -->
+  <rect x="570" y="110" width="230" height="380" class="disp-box" />
+  <text x="685" y="140" text-anchor="middle" class="text-label">WeAct 2.9" E-Paper</text>
+  <text x="685" y="158" text-anchor="middle" class="text-sub">SSD1680 8-Pin Harness</text>
+
+  <!-- Display Harness Pins -->
+  <rect x="585" y="175" width="85" height="28" fill="#fef2f2" stroke="#fca5a5" rx="4" />
+  <text x="627" y="194" text-anchor="middle" class="text-pin" fill="#dc2626">VCC (3.3V)</text>
+
+  <rect x="585" y="215" width="85" height="28" fill="#f1f5f9" stroke="#cbd5e1" rx="4" />
+  <text x="627" y="234" text-anchor="middle" class="text-pin" fill="#0f172a">GND</text>
+
+  <rect x="585" y="255" width="95" height="28" fill="#fefce8" stroke="#fef08a" rx="4" />
+  <text x="632" y="274" text-anchor="middle" class="text-pin" fill="#854d0e">DIN / SDI</text>
+
+  <rect x="585" y="295" width="95" height="28" fill="#fff7ed" stroke="#ffedd5" rx="4" />
+  <text x="632" y="314" text-anchor="middle" class="text-pin" fill="#c2410c">CLK / SCLK</text>
+
+  <rect x="585" y="335" width="85" height="28" fill="#f8fafc" stroke="#e2e8f0" rx="4" />
+  <text x="627" y="354" text-anchor="middle" class="text-pin" fill="#334155">CS</text>
+
+  <rect x="585" y="375" width="85" height="28" fill="#f0fdf4" stroke="#bbf7d0" rx="4" />
+  <text x="627" y="394" text-anchor="middle" class="text-pin" fill="#15803d">DC</text>
+
+  <rect x="585" y="415" width="85" height="28" fill="#faf5ff" stroke="#f3e8ff" rx="4" />
+  <text x="627" y="434" text-anchor="middle" class="text-pin" fill="#6b21a8">RES / RST</text>
+
+  <rect x="585" y="455" width="85" height="28" fill="#f8fafc" stroke="#cbd5e1" rx="4" />
+  <text x="627" y="474" text-anchor="middle" class="text-pin" fill="#475569">BUSY</text>
+
+  <!-- Connecting Wires with Labels in Center -->
+  <!-- 1. VCC (Red) -->
+  <line x1="265" y1="189" x2="585" y2="189" class="wire-pwr" />
+  <text x="425" y="182" text-anchor="middle" class="text-pin" fill="#dc2626">Power (Red)</text>
+
+  <!-- 2. GND (Black) -->
+  <line x1="265" y1="229" x2="585" y2="229" class="wire-gnd" />
+  <text x="425" y="222" text-anchor="middle" class="text-pin" fill="#0f172a">Ground (Black)</text>
+
+  <!-- 3. DIN / MOSI (Yellow) -->
+  <line x1="265" y1="269" x2="585" y2="269" class="wire-mosi" />
+  <text x="425" y="262" text-anchor="middle" class="text-pin" fill="#a16207">SPI MOSI (Yellow)</text>
+
+  <!-- 4. CLK / SCK (Orange) -->
+  <line x1="265" y1="309" x2="585" y2="309" class="wire-sck" />
+  <text x="425" y="302" text-anchor="middle" class="text-pin" fill="#c2410c">SPI Clock (Orange)</text>
+
+  <!-- 5. CS (White) -->
+  <line x1="265" y1="349" x2="585" y2="349" class="wire-cs" />
+  <text x="425" y="342" text-anchor="middle" class="text-pin" fill="#475569">Chip Select (White)</text>
+
+  <!-- 6. DC (Green) -->
+  <line x1="265" y1="389" x2="585" y2="389" class="wire-dc" />
+  <text x="425" y="382" text-anchor="middle" class="text-pin" fill="#15803d">Data/Command (Green)</text>
+
+  <!-- 7. RST (Violet) -->
+  <line x1="265" y1="429" x2="585" y2="429" class="wire-rst" />
+  <text x="425" y="422" text-anchor="middle" class="text-pin" fill="#7e22ce">Hardware Reset (Violet)</text>
+
+  <!-- 8. BUSY (Gray) -->
+  <line x1="265" y1="469" x2="585" y2="469" class="wire-busy" />
+  <text x="425" y="462" text-anchor="middle" class="text-pin" fill="#334155">Busy Status (Gray)</text>
+</svg>
