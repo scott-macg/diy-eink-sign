@@ -15,7 +15,7 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 - **MCU:** Seeed Studio XIAO ESP32-C6 (3.3V logic, integrated LiPo charging, Wi-Fi 6).
 - **Display:** WeAct Studio 2.9" 3-Color E-Paper Module (296x128 pixels, SPI interface).
 - **Battery:** 902540 3.7V 800mAh 2.96Wh 25C High-Discharge LiPo cell (integrated PCM, direct solder to `BAT+`/`BAT-` pads).
-- **Peripherals:** 2x Micro switches (External Reset & External Boot / Force-Refresh), 20mm 8Ω Dynamic Speaker with NPN Transistor Driver (5V rail, 1kΩ base resistor, flyback diode), 2x 100kΩ Voltage Divider on Analog Battery Sense (`D0`).
+- **Peripherals:** 2x Tactile Microswitches (SW1 on `D9`/`GPIO 9` & SW2 on `D7`/`GPIO 17` with double-click/long-press support; hardware `RST` commented out for future revisions), 20mm 8Ω Dynamic Speaker with NPN Transistor Driver (3.3V rail, 1kΩ base resistor, flyback diode), 2x 100kΩ Voltage Divider on Analog Battery Sense (`D0`).
 - **Enclosure:** 3D-printed housing + laser-cut/custom plexiglass protective window.
 
 ### Pin Wiring Table
@@ -27,8 +27,9 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 | **Data / Command** | DC | `D2` | GPIO 2 | Output |
 | **Reset** | RST | `D3` | GPIO 21 | Output |
 | **Busy Signal** | BUSY | `D4` | GPIO 22 | Input |
-| **External Reset Switch**| - | `RST` | CHIP_PU / RST | Input (Pull to GND for hardware reset) |
-| **Boot / Force-Refresh Switch**| - | `D9` | GPIO 9 | Input (`INPUT_PULLUP` / Boot mode) |
+| **Switch 1 (Forward / Action)**| - | `D9` | GPIO 9 | Input (`INPUT_PULLUP`, multi-press/hold) |
+| **Switch 2 (Back / Secondary)** | - | `D7` | GPIO 17 | Input (`INPUT_PULLUP`, multi-press/hold) |
+| *(Hardware Reset - Reserved)*| - | *`RST`* | *CHIP_PU / RST* | *Input (Reserved for future hardware revision)* |
 | **Speaker (NPN Driver)** | - | `D6` | GPIO 16 | Output (PWM / 8-bit 8kHz PCM Audio) |
 | **Battery Sense Divider** | - | `D0` | GPIO 0 | Input (Analog ADC1_CH0, 2x 100kΩ divider) |
 | **Power (3.3V)** | VCC | `3V3` | - | 3.3V Power Rail |

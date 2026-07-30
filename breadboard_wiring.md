@@ -29,9 +29,9 @@ This document contains step-by-step breadboard prototyping instructions and elec
              (D0)  |  1 [ ]     [ ] 14 |  5V
      (CS)    (D1)  |  2 [ ]     [ ] 13 |  GND
      (DC)    (D2)  |  3 [ ]     [ ] 12 |  (D6)  (BUZZER)
-     (RST)   (D3)  |  4 [ ]     [ ] 11 |  (D7)  (TX)
+     (RST)   (D3)  |  4 [ ]     [ ] 11 |  (D7)  (SW2 / BACK SW)
      (BUSY)  (D4)  |  5 [ ]     [ ] 10 |  (D8)  (SCK)
-             (D5)  |  6 [ ]     [ ]  9 |  (D9)  (BOOT/REFRESH SW)
+             (D5)  |  6 [ ]     [ ]  9 |  (D9)  (SW1 / FORWARD SW)
              3V3   |  7 [ ]     [ ]  8 |  (D10) (MOSI)
                    +-------------------+
 ```
@@ -50,10 +50,12 @@ This document contains step-by-step breadboard prototyping instructions and elec
 | **E-Paper Display** | `DC` | Green | `D2` | GPIO 2 | Data / Command Control |
 | **E-Paper Display** | `RST` | Violet | `D3` | GPIO 21 | Display Hardware Reset |
 | **E-Paper Display** | `BUSY` | Gray | `D4` | GPIO 22 | Display Busy Status (Active High) |
-| **Boot Switch** | Leg 1 | Jumper | `D9` | GPIO 9 | Force-Refresh Input (Internal Pullup) |
-| **Boot Switch** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
-| **Reset Switch** | Leg 1 | Jumper | `RST` / `CHIP_PU` | CHIP_PU | Hardware Chip Reset |
-| **Reset Switch** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
+| **Switch 1 (Forward / Action)** | Leg 1 | Jumper | `D9` | GPIO 9 | Primary Input (Internal Pullup / Multi-press/Hold) |
+| **Switch 1 (Forward / Action)** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
+| **Switch 2 (Back / Secondary)** | Leg 1 | Jumper | `D7` | GPIO 17 | Secondary Input (Internal Pullup / Multi-press/Hold) |
+| **Switch 2 (Back / Secondary)** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
+| *(Hardware Reset - Reserved)* | *Leg 1* | *Jumper* | *`RST` / `CHIP_PU`* | *CHIP_PU* | *Hardware Chip Reset (Reserved for future revision)* |
+| *(Hardware Reset - Reserved)* | *Leg 2* | *Jumper* | *`GND`* | *-* | *Ground connection on press* |
 | **NPN Transistor Base** | Base Pin | 1kΩ Resistor | `D6` | GPIO 16 | PWM / PCM Audio Output |
 | **Speaker Positive** | Positive (`+`) | Red Wire | `3V3` (or `BAT+`) | - | 3.3V Power Supply (Note: XIAO 5V pin has 0V on battery power) |
 | **Speaker Negative** | Negative (`-`) | Black Wire | NPN Collector | - | Switch path through transistor to GND |
@@ -79,9 +81,10 @@ graph TD
         GPIO2["D2 / GPIO 2 (DC)"]
         GPIO21["D3 / GPIO 21 (RST)"]
         GPIO22["D4 / GPIO 22 (BUSY)"]
-        GPIO9["D9 / GPIO 9 (BOOT)"]
+        GPIO9["D9 / GPIO 9 (SW1 / Forward)"]
+        GPIO17["D7 / GPIO 17 (SW2 / Back)"]
         GPIO16["D6 / GPIO 16 (BUZZER)"]
-        CHIP_PU["RST / CHIP_PU"]
+        %% CHIP_PU["RST / CHIP_PU (Reserved for future revision)"]
     end
 
     subgraph EINK ["WeAct 2.9 Inch E-Paper Display"]
@@ -96,8 +99,8 @@ graph TD
     end
 
     subgraph INPUTS ["Tactile Switches & Peripherals"]
-        SW_BOOT["Boot / Refresh Button"]
-        SW_RST["Hardware Reset Button"]
+        SW1["Switch 1 (D9 Forward/Action)"]
+        SW2["Switch 2 (D7 Back/Secondary)"]
         SPEAKER["20mm Dynamic Speaker"]
         NPN["NPN Transistor Switch"]
     end
@@ -105,8 +108,8 @@ graph TD
     %% Power Connections
     XIAO_3V3 --> E_VCC
     XIAO_GND --> E_GND
-    XIAO_GND --> SW_BOOT
-    XIAO_GND --> SW_RST
+    XIAO_GND --> SW1
+    XIAO_GND --> SW2
     XIAO_GND --> NPN
     USB -->|5V Rail| SPEAKER
 
@@ -119,8 +122,8 @@ graph TD
     E_BUSY -->|Busy Status| GPIO22
 
     %% Switch & Audio Connections
-    GPIO9 -->|Force Refresh| SW_BOOT
-    CHIP_PU -->|MCU Hardware Reset| SW_RST
+    GPIO9 -->|Forward/Cycle Input| SW1
+    GPIO17 -->|Back/Action Input| SW2
     GPIO16 -->|PWM / PCM Audio (1kΩ)| NPN
     NPN -->|Collector Drive| SPEAKER
 ```
@@ -148,17 +151,17 @@ Connect the 8-pin display harness directly into the XIAO pins or breadboard rows
 7. `RST` -> Connect to XIAO `D3` (Row corresponding to pin 4).
 8. `BUSY`-> Connect to XIAO `D4` (Row corresponding to pin 5).
 
-### Step 4: Add Tactile Pushbuttons & Hardware Interface Controls
-1. **Top Interactive Action / Screen-Cycle Microswitch (`D9` / `GPIO 9`):**
-   - **Physical Placement:** Mounted facing the **top of the unit** with a **raised button** for easy daily access.
+### Step 4: Add Tactile Microswitches & Interface Controls
+1. **Switch 1 - Forward / Action Microswitch (`D9` / `GPIO 9`):**
+   - **Physical Placement:** Mounted on enclosure for primary interaction.
    - **Wiring:** Terminal A -> Connect to XIAO `D9` (Pin 9 / GPIO 9); Terminal B -> Connect to `GND`.
-   - **Interaction Modes:**
-     - **Short Press:** Wakes device from deep sleep, sends `X-Display-Action: cycle` header to backend (bypassing 304 cache) to cycle to the next screen/quote of the day, updates display, and re-enters sleep.
-     - **Long Press (>400ms):** Enters **Maintenance Mode** (starts Web Server & WebSockets REPL for file uploads and config changes).
-2. **Back Recessed Reset Microswitch (`RST` / `CHIP_PU`):**
-   - **Physical Placement:** Mounted on the **back panel**, recessed behind a small pinhole aperture to prevent accidental presses.
-   - **Wiring:** Terminal A -> Connect to XIAO `RST` / `CHIP_PU` pad; Terminal B -> Connect to `GND`.
-   - **Function:** Hard system chip reset.
+   - **Capabilities:** Internal pull-up enabled. Supports single-press, double-click, and long-press triggers.
+2. **Switch 2 - Back / Secondary Action Microswitch (`D7` / `GPIO 17`):**
+   - **Physical Placement:** Mounted on enclosure for secondary interaction.
+   - **Wiring:** Terminal A -> Connect to XIAO `D7` (Pin 11 / GPIO 17); Terminal B -> Connect to `GND`.
+   - **Capabilities:** Internal pull-up enabled. Supports single-press, double-click, and long-press triggers.
+3. *(Optional / Reserved) Hardware Chip Reset (`RST` / `CHIP_PU`):*
+   - *Commented out for future hardware revisions: Connect Terminal A to XIAO `CHIP_PU` pad and Terminal B to `GND`.*
 
 ### Step 5: Add 20mm Speaker & NPN Transistor Driver
 1. Connect NPN Transistor **Emitter** (`E`) to `GND` rail.
