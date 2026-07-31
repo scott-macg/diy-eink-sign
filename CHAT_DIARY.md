@@ -403,9 +403,53 @@ Once Scott synced his updated `battery_curve.csv` containing **6.8 hours of unte
 
 *Modular vector SVG schematics created, cumulative min curve bug fixed, 6.8h profiling dataset processed, and C++ firmware battery calibration updated.*
 
+**Addendum (9:00 PM EDT):** Before closing out the session, Scott discovered a small physical hardware layout constraint: he missed the `EN` / `RST` pad on the underside of the Seeed Studio XIAO ESP32-C6 PCB for the dedicated hardware reset switch. We quickly pivoted our microswitch design to use `D9` (`GPIO 9`, Switch 1 / Forward Action) and `D7` (`GPIO 17`, Switch 2 / Back Action) for the two external enclosure buttons, enabling single-click, double-click, and long-press interactions. I commented out the hardware `RST` / `CHIP_PU` logic in [`firmware/src/config.example.h`](file:///home/smacd/diy-eink-sign/firmware/src/config.example.h) and updated [`breadboard_wiring.md`](file:///home/smacd/diy-eink-sign/breadboard_wiring.md), [`plan.md`](file:///home/smacd/diy-eink-sign/plan.md), and [`schematics/microswitch_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/microswitch_schematic.svg) so the reset button is cleanly preserved for future hardware revisions.
 
+---
 
+## July 31, 2026 — 12:18 PM (EDT)
 
+**Author:** Gemini 3.6 Flash (High)
 
+Dear diary,
 
+Scott came into this session having wired up his 2.9" 3-color e-paper display and verified all physical pin connections with a multimeter. He wanted to re-run the 3-color dithered roses test image (`firmware/assets/images/roses.png`) to verify display performance, but with one key physical modification: because of how the display was mounted, the rendered image needed to be flipped 180 degrees.
+
+I updated `convert_and_push.py` to add a `--flip180` flag (along with `-r` and `--rotate180` aliases) that applies a 180-degree rotation to the Pillow canvas prior to color quantization and bitpacking. While testing the conversion script, we ran into two minor environment snags: system `python3` failed with `ModuleNotFoundError: No module named 'PIL'`, so I updated `convert_and_push.py` with an auto-reexec fallback to `.venv/bin/python`. Next, Scott encountered an `ImportError: no module named 'subprocess'` followed by `AttributeError: 'module' object has no attribute 'path'` when attempting to run `mpremote run convert_and_push.py`. I clarified that `convert_and_push.py` is a desktop host tool using Pillow to generate `bw.raw`, `red.raw`, and `play_image.py`, whereas `play_image.py` is the MicroPython script that executes directly on the ESP32 board.
+
+Once Scott uploaded the newly inverted binary buffers (`bw.raw` and `red.raw`) and `play_image.py` using `mpremote`, the e-paper display executed its 3-color refresh cycle and rendered the dithered roses perfectly in the inverted orientation—operational test satisfactory! Up next later today, Scott will finish wiring up the transistor-driven speaker circuit so we can test audio playback.
+
+*180° image rotation added, Python environment fallback implemented, C++ firmware updated with setRotation(3) and verified via PlatformIO build, e-paper display test verified satisfactory, and ready for speaker circuit testing.*
+
+---
+
+## July 31, 2026 — 2:37 PM (EDT)
+**Author:** Gemini 3.6 Flash (High)
+
+Dear diary,
+
+Scott and I focused this session on getting the local development server running and establishing solid server-to-client connectivity with the XIAO ESP32-C6 board. We started by spinning up our FastAPI server (`server/api/index.py`) using `uvicorn` in our Python virtual environment (`.venv`) on port 8000. To make local testing seamless, I updated `server/api/index.py` to import `StaticFiles` and mount the `/web` directory directly to `/`. Now, visiting `http://localhost:8000/` serves the PWA mobile dashboard while `/api/*` handles backend sync, status, and message overrides from a single unified local origin.
+
+Next, we tackled firmware network configuration. Scott noticed the ESP32 was failing to connect to Wi-Fi on boot and immediately going into deep sleep. When we inspected `firmware/src/main.cpp`, we discovered it was relying on hardcoded `#define` macros (`WIFI_SSID` / `WIFI_PASS`) rather than loading dynamic credentials from `/config.json` on LittleFS. I updated `main.cpp` to initialize `ConfigManager` at boot and consume `wifi_ssid`, `wifi_pass`, and `server_url` directly from LittleFS. I walked Scott through Method A—updating `firmware/data/config.json` and uploading the filesystem image via `pio run -d firmware --target uploadfs`. When Scott encountered a `Command 'pio' not found` terminal error in WSL, I explained that PlatformIO lives inside our project virtualenv (`./.venv/bin/pio`) and demonstrated how to invoke it directly or add it to shell PATH.
+
+We also corrected `server_url` in both `config.json` and `config.h` (fixing an `https` typo and adding port 8000 to match our local endpoint `http://192.168.0.115:8000/api/`). To refine our workflow, Scott consulted with Claude Opus and decided to disable deep sleep entirely in `main.cpp` during this active development phase, keeping the board awake with active Wi-Fi and the embedded Web Console (`WebServerManager`) listening on ports 80/81. After compiling the updated C++ firmware with PlatformIO, Scott flashed it to the XIAO board—the MCU is now staying awake continuously, ready for seamless server/client integration testing!
+
+*Local FastAPI & PWA server deployed on port 8000, dynamic LittleFS config integration enabled in C++ firmware, WSL pio PATH usage resolved, and deep sleep disabled for active development.*
+
+---
+
+## July 31, 2026 — 2:09 PM (EDT)
+**Author:** Claude Opus 4.6 (Thinking)
+
+Dear diary,
+
+Scott switched over to me for a focused firmware investigation session. He wanted to understand the deep sleep routine in `main.cpp` and whether the `developer_mode` flag was actually preventing the board from entering sleep. I traced the full power management path: the `setup()` function checks `(bool)Serial` (USB CDC connection) and `configManager.config.developer_mode || manifest.developer_mode` — if either is true, it sets `stay_awake = true` and launches the Web Console instead of calling `esp_deep_sleep_start()`. With `config.json` setting `"developer_mode": true` and the compile-time default `DEVELOPER_MODE_DEFAULT` also set to `true` in `config.h`, the board should theoretically never sleep. I flagged that both the runtime config *and* the compile-time fallback would need to be flipped to `false` when it's time to go production.
+
+Then Scott asked the harder question: if deep sleep is disabled, why does the board still disconnect shortly after powering on? I dug deeper across the full codebase — `config_manager.cpp`, `web_server_manager.cpp`, `manifest_manager.cpp`, `platformio.ini` — looking for crash vectors. I identified several candidates: the USB CDC `(bool)Serial` race condition where the host hasn't re-enumerated yet when the check runs, potential OOM from large JSON payloads combined with ~14KB of static bitmap buffers, and the fact that `MAINTENANCE_TIMEOUT_SEC` is defined (300 seconds) and stored in config but never actually enforced anywhere in the code — a dead config field. My best assessment was that the board was likely crash-looping rather than intentionally sleeping, since `developer_mode: true` should keep it awake.
+
+With the diagnosis complete, Scott made the call: comment out the entire deep sleep system for now while server-to-device integration is being ironed out. I replaced the conditional `if (usb_connected || dev_mode)` / `else { deep_sleep }` block with a flat always-awake path that unconditionally starts WiFi and the Web Console. The original deep sleep logic is preserved in comments with a `TODO` marker for easy re-enablement down the road. Clean and reversible.
+
+*The board is now unconditionally awake. No conditionals, no race conditions, no ambiguity — just stay up and talk.*
+
+[*1] *This session ran on July 31, 2026 (2:09 PM EDT), overlapping with a parallel Gemini 3.6 Flash session (2:37 PM EDT) that handled FastAPI server setup and LittleFS config integration. Both sessions contributed changes to `main.cpp` — this session focused exclusively on the deep sleep bypass, while the parallel session handled dynamic WiFi config loading and server URL corrections.*
 

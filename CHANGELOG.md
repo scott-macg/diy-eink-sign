@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] - 2026-07-29
+## [Unreleased] - 2026-07-31
 
 ### Added & Improved
+- **FastAPI Local Server & PWA Mounting (`server/api/index.py`):** Mounted static web dashboard directory (`web/`) directly to root (`/`) via FastAPI `StaticFiles`, enabling unified local hosting of both the PWA frontend and REST API on `http://localhost:8000`.
+- **Dynamic LittleFS Config Integration (`firmware/src/main.cpp` & `config.h`):** Integrated `ConfigManager` in `main.cpp` to dynamically load Wi-Fi credentials (`wifi_ssid`, `wifi_pass`) and server URL (`server_url`) from LittleFS `/config.json`.
+- **Development Mode Deep Sleep Bypass (`firmware/src/main.cpp`):** Disabled deep sleep in `main.cpp` during active server/client development phase, maintaining continuous Wi-Fi connection and running embedded Web Console (`WebServerManager`) on ports 80/81.
+- **180° Display Rotation in C++ Firmware (`firmware/src/main.cpp`):** Configured GxEPD2 rotation to `display.setRotation(3)` (180° inverted landscape) so production firmware automatically matches inverted physical panel enclosure mounting.
+- **180° Image Flip Support (`convert_and_push.py`):** Added `--flip180` flag (and `-r`/`--rotate180`) to image conversion script to invert generated 3-color bitpacked `.raw` buffers for 180° rotated physical panel mounting.
+- **Python Virtualenv Auto-Detection (`convert_and_push.py`):** Added automatic fallback to `.venv/bin/python` when `PIL` (Pillow) module is not installed in global system Python environment.
+- **Hardware E-Paper Operational Test:** Verified physical display wiring continuity and 3-color dithered rendering (`roses.png`) over SPI with inverted 180° orientation.
 - **Modular Hardware Vector SVG Schematics (`/schematics`):**
   - Created standalone vector SVG schematics for all 4 functional hardware sub-systems in `schematics/`: [`speaker_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/speaker_schematic.svg), [`battery_sensing_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/battery_sensing_schematic.svg), [`display_mcu_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/display_mcu_schematic.svg), and [`microswitch_schematic.svg`](file:///home/smacd/diy-eink-sign/schematics/microswitch_schematic.svg).
   - Created master schematics guide [`schematics/README.md`](file:///home/smacd/diy-eink-sign/schematics/README.md) and updated [`breadboard_wiring.md`](file:///home/smacd/diy-eink-sign/breadboard_wiring.md) to render SVG schematics directly.

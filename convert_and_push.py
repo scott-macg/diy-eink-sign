@@ -1,9 +1,8 @@
 import sys
 import os
-import subprocess
 from PIL import Image
 
-def convert_png_to_3color_raw(png_path, out_bw_path="bw.raw", out_red_path="red.raw"):
+def convert_png_to_3color_raw(png_path, out_bw_path="bw.raw", out_red_path="red.raw", flip_180=False):
     if not os.path.exists(png_path):
         print(f"Error: File '{png_path}' not found.")
         sys.exit(1)
@@ -19,6 +18,10 @@ def convert_png_to_3color_raw(png_path, out_bw_path="bw.raw", out_red_path="red.
     elif (img.width, img.height) != (128, 296):
         print(f"Resizing image from {img.size} to (128, 296)...")
         img = img.resize((128, 296))
+
+    if flip_180:
+        print("Flipping image 180 degrees...")
+        img = img.rotate(180)
 
     # Define 3-Color Palette: 0=Black, 1=White, 2=Red
     pal = Image.new("P", (1, 1))
@@ -36,7 +39,7 @@ def convert_png_to_3color_raw(png_path, out_bw_path="bw.raw", out_red_path="red.
     quantized.save(preview_path)
     print(f"Dithered preview saved to '{preview_path}'.")
 
-    pixels = list(quantized.getdata())  # 128 * 296 pixels
+    pixels = list(quantized.get_flattened_data() if hasattr(quantized, "get_flattened_data") else quantized.getdata())  # 128 * 296 pixels
     total_bytes = (128 * 296) // 8
     
     bw_bytes = bytearray(total_bytes)
@@ -136,9 +139,10 @@ render_image()
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python3 convert_and_push.py <path_to_png_image>")
+        print("Usage: python3 convert_and_push.py <path_to_png_image> [--flip180]")
         sys.exit(1)
         
     png_path = sys.argv[1]
-    convert_png_to_3color_raw(png_path)
+    flip = "--flip180" in sys.argv or "-r" in sys.argv or "--rotate180" in sys.argv
+    convert_png_to_3color_raw(png_path, flip_180=flip)
     generate_micropython_player()
