@@ -7,9 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] - 2026-07-31
+## [Unreleased] - 2026-08-01
 
 ### Added & Improved
+- **MicroPython Hardware Audio Testing Setup (`play_chime.py`, `chime.raw`, `switch_test.py`):**
+  - Prepared root workspace environment for MicroPython hardware verification of speaker driver on `GPIO 16` and dual tactile microswitches on `GPIO 17` (`D7`) and `GPIO 20` (`D9`).
+  - Added standalone `switch_test.py` script for polling microswitch state inputs in MicroPython.
+- **Microswitch Hardware Pin Mapping & Documentation (`breadboard_wiring.md` & `firmware/src/config.h`):** Corrected Seeed Studio XIAO ESP32-C6 pin mapping for Switch 1 (`D9` $\rightarrow$ `GPIO 20` / `SW_RIGHT_PIN`) and Switch 2 (`D7` $\rightarrow$ `GPIO 17` / `SW_LEFT_PIN`).
+- **Non-Blocking Dual Microswitch Navigation & Force Sync (`firmware/src/main.cpp`):**
+  - Implemented `handle_buttons()` for Left (`D7`) and Right (`D9`) microswitches with debouncing and long-press detection.
+  - **D9 (Right Switch):** Single press cycles forward through available cached screen slots; Long press ($\ge$1.5s) forces an instant Wi-Fi sync update from the backend server.
+  - **D7 (Left Switch):** Single press cycles backward through cached screen slots; Long press ($\ge$1.5s) renders the hardware System Status Card (`render_fallback_card()`).
+- **ESP32-C6 SPI Pin Release & GPIO State Guard (`firmware/src/main.cpp`):**
+  - Added `SPI.end()` and `pinMode(..., INPUT_PULLUP)` re-assertions after e-paper panel hibernates to prevent the ESP32 SPI hardware driver from hijacking default MISO (`GPIO 20`) as an active SPI pin.
+  - Added post-render button state clearing (`reset_button_states()`) to eliminate false long-press triggering after 15-second blocking e-paper panel refreshes.
+  - Re-asserted `pinMode(BUZZER_PIN, OUTPUT)` after PWM audio generation to resolve `IO 16 is not set as GPIO` HAL warnings.
 - **Deterministic Quote Engine & High-Contrast Typography Layout (`server/api/quotes.py` & `composer.py`):**
   - Integrated JSON quote repository ([`quotes-v6.json`](file:///home/smacd/diy-eink-sign/server/epaper-server/assets/quotes-v6.json)) into FastAPI server.
   - Implemented `get_daily_quote()` with date-hash seeding for stable daily quote rendering across device check-ins.

@@ -27,7 +27,7 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 | **Data / Command** | DC | `D2` | GPIO 2 | Output |
 | **Reset** | RST | `D3` | GPIO 21 | Output |
 | **Busy Signal** | BUSY | `D4` | GPIO 22 | Input |
-| **Switch 1 (Forward / Action)**| - | `D9` | GPIO 9 | Input (`INPUT_PULLUP`, multi-press/hold) |
+| **Switch 1 (Forward / Action)**| - | `D9` | GPIO 20 | Input (`INPUT_PULLUP`, multi-press/hold) |
 | **Switch 2 (Back / Secondary)** | - | `D7` | GPIO 17 | Input (`INPUT_PULLUP`, multi-press/hold) |
 | *(Hardware Reset - Reserved)*| - | *`RST`* | *CHIP_PU / RST* | *Input (Reserved for future hardware revision)* |
 | **Speaker (NPN Driver)** | - | `D6` | GPIO 16 | Output (PWM / 8-bit 8kHz PCM Audio) |
@@ -91,6 +91,7 @@ A local-first, low-power smart desk plaque using a Seeed Studio XIAO ESP32-C6 an
 - [x] Implement embedded Web Dashboard and WebSockets Web REPL (`WebServerManager`) supporting live terminal CLI commands (`info`, `ls`, `cat`, `rm`, `config`, `set`, `play`, `refresh`, `reboot`).
 - [x] Implement REST File Manager endpoints (`/api/files`, `/api/upload`, `/api/delete`) for over-the-air audio and image asset updates.
 - [x] Add persistent `"developer_mode"` setting to disable deep sleep and maintain active Web REPL connectivity over Wi-Fi.
+- [x] Implement dual microswitch navigation & force Wi-Fi sync (`D7` / `GPIO 17` and `D9` / `GPIO 20`) with debouncing, slot-existence validation, and post-SPI pin release.
 - [ ] **Future Feature (On-Device Rendering & Offline Screen Caching):**
   - [ ] Store fallback bitmap screens/templates in LittleFS flash memory for offline display when Wi-Fi connection fails or server is unreachable.
   - [ ] Render basic local canvas graphics (clock, offline status badge, local alerts) directly on-device using `Adafruit_GFX` / `GxEPD2` primitives without server roundtrips.

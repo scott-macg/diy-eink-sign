@@ -487,4 +487,39 @@ On the PWA web dashboard (`web/index.html` & `app.js`), we added a `🚀 Push Qu
 
 *Daily Quote engine integrated, Floyd-Steinberg dithered gradient canvas and high-contrast typography pipeline live, and instant web dashboard push controls verified!*
 
+---
+
+## August 1, 2026 — 3:13 PM (EDT)
+**Author:** Gemini 3.6 Flash (High)
+
+Dear diary,
+
+Scott popped in to test the microswitches attached to pins D7 and D9 on the breadboard. He wanted to write the Python test script himself to verify the physical switches and just needed a quick check on MicroPython pin initialization with internal pull-ups and active-low logic. We reviewed the pin mappings for the Seeed Studio XIAO ESP32-C6: D7 maps to GPIO 17, while D9 maps to GPIO 20. While writing his test script `switch_test.py`, Scott caught that D9 was indeed GPIO 20 (fixing a minor typo in our earlier wiring guide), and both microswitches tested cleanly!
+
+With the switches verified (and the speaker circuit temporarily set aside to focus on input controls), Scott asked us to implement Option 1 switch behavior directly in the C++ production firmware (`firmware/src/main.cpp`): D9 (Right switch) single press cycles forward through cached screen slots while a long press ($\ge$1.5s) forces an instant Wi-Fi sync update from the backend server; D7 (Left switch) single press cycles backward through screen slots while a long press ($\ge$1.5s) renders the hardware System Status Card (`render_fallback_card()`).
+
+When Scott uploaded the initial firmware build, D9 immediately began spamming serial error logs (`[Manifest] Failed to open bitmap slot files (/bw_slot1.raw, /red_slot1.raw)`), triggering phantom refreshes and long-press loops. We analyzed the empirical serial log output and uncovered two crucial hardware root causes. First, because only `slot 0` had been saved to LittleFS during initial sync, attempting to cycle to non-existent `slot 1` caused LittleFS file open failures; we added `has_bitmap_slot()` and `get_next_available_slot()` helper functions so button presses dynamically cycle only among existing cached slots. 
+
+Second, the serial log delivered the smoking gun: `[ 27315][W][esp32-hal-gpio.c:197] __digitalRead(): IO 20 is not set as GPIO. digitalRead() may return an inconsistent value.` On the ESP32-C6, GPIO 20 is designated as the hardware default SPI MISO pin! Whenever `display.init()` and `SPI.begin()` ran, the ESP32 SPI HAL driver automatically claimed GPIO 20 for SPI and stripped its GPIO input mode. As a result, `digitalRead(20)` constantly returned `0` (LOW), tricking `handle_buttons()` into thinking D9 was being held down continuously in an infinite long-press loop!
+
+We resolved the issue by adding `SPI.end()` immediately after panel hibernations, re-asserting `pinMode(SW_RIGHT_PIN, INPUT_PULLUP)` and `pinMode(SW_LEFT_PIN, INPUT_PULLUP)` after e-paper flushes and inside `handle_buttons()`, and clearing press timers with `reset_button_states()` after 15-second blocking panel updates. We also re-asserted `pinMode(BUZZER_PIN, OUTPUT)` after PWM audio chimes to resolve LEDC HAL warnings. The firmware re-compiled with zero errors, leaving the physical e-ink sign with a fully functional, debounced dual-button interface!
+
+*Hardware verified, SPI pin-hijacking bug resolved, and dual microswitch navigation live!*
+
+---
+
+## August 1, 2026 — 3:15 PM (EDT)
+**Author:** Gemini 3.6 Flash (High)
+
+Dear diary,
+
+Scott came back into this session looking to test speaker audio output on the XIAO ESP32-C6 board. Since we had successfully played audio chimes using MicroPython earlier in the project, Scott re-flashed MicroPython onto the board so we could test playback in a controlled, lightweight environment.
+
+We prepped the root workspace for testing by copying our 8kHz 8-bit unsigned PCM sample file ([`chime.raw`](file:///home/smacd/diy-eink-sign/chime.raw)) from `firmware/assets/audio/` into the root directory alongside [`play_chime.py`](file:///home/smacd/diy-eink-sign/play_chime.py). We also provided step-by-step pinout and transistor driver sanity checks for the 20mm dynamic speaker circuit on `GPIO 16` (`D6`), including NPN pin orientation (Emitter to GND, Base to 1kΩ resistor on `D6`, Collector to Speaker negative lead).
+
+However, when running `mpremote` from the terminal to upload the raw audio buffer and player script, `mpremote` failed with `mpremote: no device found`. Whether due to a USB serial device disconnect, missing port mapping, or board sleep state, Scott decided not to spend time troubleshooting the serial connection or speaker hardware right now and called for a wrapup. We'll leave speaker audio set aside for now and pick it back up in a future session.
+
+*MicroPython audio test assets staged in workspace root, speaker NPN driver pinout documented, and hardware audio troubleshooting deferred for a future session.*
+
+
 

@@ -50,7 +50,7 @@ This document contains step-by-step breadboard prototyping instructions and elec
 | **E-Paper Display** | `DC` | Green | `D2` | GPIO 2 | Data / Command Control |
 | **E-Paper Display** | `RST` | Violet | `D3` | GPIO 21 | Display Hardware Reset |
 | **E-Paper Display** | `BUSY` | Gray | `D4` | GPIO 22 | Display Busy Status (Active High) |
-| **Switch 1 (Forward / Action)** | Leg 1 | Jumper | `D9` | GPIO 9 | Primary Input (Internal Pullup / Multi-press/Hold) |
+| **Switch 1 (Forward / Action)** | Leg 1 | Jumper | `D9` | GPIO 20 | Primary Input (Internal Pullup / Multi-press/Hold) |
 | **Switch 1 (Forward / Action)** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
 | **Switch 2 (Back / Secondary)** | Leg 1 | Jumper | `D7` | GPIO 17 | Secondary Input (Internal Pullup / Multi-press/Hold) |
 | **Switch 2 (Back / Secondary)** | Leg 2 | Jumper | `GND` | - | Ground connection on press |
@@ -81,7 +81,7 @@ graph TD
         GPIO2["D2 / GPIO 2 (DC)"]
         GPIO21["D3 / GPIO 21 (RST)"]
         GPIO22["D4 / GPIO 22 (BUSY)"]
-        GPIO9["D9 / GPIO 9 (SW1 / Forward)"]
+        GPIO20["D9 / GPIO 20 (SW1 / Forward)"]
         GPIO17["D7 / GPIO 17 (SW2 / Back)"]
         GPIO16["D6 / GPIO 16 (BUZZER)"]
         %% CHIP_PU["RST / CHIP_PU (Reserved for future revision)"]
@@ -122,7 +122,7 @@ graph TD
     E_BUSY -->|Busy Status| GPIO22
 
     %% Switch & Audio Connections
-    GPIO9 -->|Forward/Cycle Input| SW1
+    GPIO20 -->|Forward/Cycle Input| SW1
     GPIO17 -->|Back/Action Input| SW2
     GPIO16 -->|PWM / PCM Audio (1kΩ)| NPN
     NPN -->|Collector Drive| SPEAKER
@@ -152,9 +152,9 @@ Connect the 8-pin display harness directly into the XIAO pins or breadboard rows
 8. `BUSY`-> Connect to XIAO `D4` (Row corresponding to pin 5).
 
 ### Step 4: Add Tactile Microswitches & Interface Controls
-1. **Switch 1 - Forward / Action Microswitch (`D9` / `GPIO 9`):**
+1. **Switch 1 - Forward / Action Microswitch (`D9` / `GPIO 20`):**
    - **Physical Placement:** Mounted on enclosure for primary interaction.
-   - **Wiring:** Terminal A -> Connect to XIAO `D9` (Pin 9 / GPIO 9); Terminal B -> Connect to `GND`.
+   - **Wiring:** Terminal A -> Connect to XIAO `D9` (Pin 9 / GPIO 20); Terminal B -> Connect to `GND`.
    - **Capabilities:** Internal pull-up enabled. Supports single-press, double-click, and long-press triggers.
 2. **Switch 2 - Back / Secondary Action Microswitch (`D7` / `GPIO 17`):**
    - **Physical Placement:** Mounted on enclosure for secondary interaction.

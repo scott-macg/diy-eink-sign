@@ -32,6 +32,7 @@ void play_chime() {
     tone(BUZZER_PIN, 1500, 150);
     delay(180);
     noTone(BUZZER_PIN);
+    pinMode(BUZZER_PIN, OUTPUT);
     digitalWrite(BUZZER_PIN, LOW);
 }
 
@@ -177,13 +178,35 @@ void render_fallback_card() {
     } while (display.nextPage());
 
     display.hibernate();
+    SPI.end();
+    pinMode(SW_LEFT_PIN, INPUT_PULLUP);
+    pinMode(SW_RIGHT_PIN, INPUT_PULLUP);
     sys_log("[Display] Fallback card render complete.");
 }
 
-// Render raw 1-bit LittleFS bitmap to Waveshare display
-void render_bitmap_from_flash() {
-    if (!loadBitmapSlot(0, bw_buffer, red_buffer, BITMAP_BUFFER_SIZE)) {
-        sys_log("[Display] Slot 0 missing from LittleFS. Rendering fallback card...");
+static int current_slot = 0;
+
+bool has_bitmap_slot(int slot_id) {
+    char bw_path[32], red_path[32];
+    snprintf(bw_path, sizeof(bw_path), "/bw_slot%d.raw", slot_id);
+    snprintf(red_path, sizeof(red_path), "/red_slot%d.raw", slot_id);
+    return LittleFS.exists(bw_path) && LittleFS.exists(red_path);
+}
+
+int get_next_available_slot(int current, int dir) {
+    for (int i = 1; i < 5; i++) {
+        int candidate = (current + dir * i + 5) % 5;
+        if (has_bitmap_slot(candidate)) {
+            return candidate;
+        }
+    }
+    return current;
+}
+
+void render_bitmap_from_slot(int slot_id) {
+    current_slot = slot_id;
+    if (!loadBitmapSlot(current_slot, bw_buffer, red_buffer, BITMAP_BUFFER_SIZE)) {
+        sys_log("[Display] Slot %d missing from LittleFS. Rendering fallback card...", current_slot);
         render_fallback_card();
         return;
     }
@@ -194,7 +217,7 @@ void render_bitmap_from_flash() {
     SPI.begin(EINK_SCK, -1, EINK_MOSI, EINK_CS);
     display.setRotation(3); // 180-degree inverted landscape for physical enclosure mounting
 
-    sys_log("[Display] Flushing bitmap buffers to Waveshare 2.9\" panel...");
+    sys_log("[Display] Flushing bitmap buffers to Waveshare 2.9\" panel (Slot %d)...", current_slot);
     display.firstPage();
     do {
         display.fillScreen(GxEPD_WHITE);
@@ -203,7 +226,101 @@ void render_bitmap_from_flash() {
     } while (display.nextPage());
 
     display.hibernate();
+    SPI.end();
+    pinMode(SW_LEFT_PIN, INPUT_PULLUP);
+    pinMode(SW_RIGHT_PIN, INPUT_PULLUP);
     sys_log("[Display] Render complete! Panel hibernating.");
+}
+
+// Render raw 1-bit LittleFS bitmap to Waveshare display
+void render_bitmap_from_flash() {
+    render_bitmap_from_slot(current_slot);
+}
+
+// Non-blocking Switch Handler for D7 (Left) and D9 (Right / GPIO 20)
+static unsigned long right_press_start = 0;
+static bool right_pressed = false;
+static bool right_long_triggered = false;
+
+static unsigned long left_press_start = 0;
+static bool left_pressed = false;
+static bool left_long_triggered = false;
+
+const unsigned long LONG_PRESS_MS = 1500;
+const unsigned long DEBOUNCE_MS = 50;
+
+void reset_button_states() {
+    right_pressed = false;
+    right_long_triggered = false;
+    left_pressed = false;
+    left_long_triggered = false;
+}
+
+void handle_buttons() {
+    // Re-assert GPIO pin modes to ensure SPI bus releases GPIO 20 (default MISO)
+    pinMode(SW_LEFT_PIN, INPUT_PULLUP);
+    pinMode(SW_RIGHT_PIN, INPUT_PULLUP);
+
+    unsigned long now = millis();
+
+    // Check Right Switch (D9 / GPIO 20)
+    int right_state = digitalRead(SW_RIGHT_PIN);
+    if (right_state == LOW) {
+        if (!right_pressed) {
+            right_pressed = true;
+            right_press_start = now;
+            right_long_triggered = false;
+        } else if (!right_long_triggered && (now - right_press_start >= LONG_PRESS_MS)) {
+            right_long_triggered = true;
+            sys_log("[Button] D9 Right Long Press -> Forcing Wi-Fi Sync...");
+            play_chime();
+            ManifestData manifest;
+            loadManifest(manifest);
+            if (perform_full_sync(manifest)) {
+                sys_log("[Button] Force sync completed successfully.");
+            }
+            render_bitmap_from_slot(current_slot);
+            reset_button_states();
+            return;
+        }
+    } else {
+        if (right_pressed) {
+            unsigned long press_duration = now - right_press_start;
+            if (press_duration >= DEBOUNCE_MS && !right_long_triggered) {
+                int next_slot = get_next_available_slot(current_slot, 1);
+                sys_log("[Button] D9 Right Single Press -> Rendering Slot %d", next_slot);
+                render_bitmap_from_slot(next_slot);
+            }
+            reset_button_states();
+        }
+    }
+
+    // Check Left Switch (D7 / GPIO 17)
+    int left_state = digitalRead(SW_LEFT_PIN);
+    if (left_state == LOW) {
+        if (!left_pressed) {
+            left_pressed = true;
+            left_press_start = now;
+            left_long_triggered = false;
+        } else if (!left_long_triggered && (now - left_press_start >= LONG_PRESS_MS)) {
+            left_long_triggered = true;
+            sys_log("[Button] D7 Left Long Press -> Showing System Status Card");
+            play_chime();
+            render_fallback_card();
+            reset_button_states();
+            return;
+        }
+    } else {
+        if (left_pressed) {
+            unsigned long press_duration = now - left_press_start;
+            if (press_duration >= DEBOUNCE_MS && !left_long_triggered) {
+                int prev_slot = get_next_available_slot(current_slot, -1);
+                sys_log("[Button] D7 Left Single Press -> Rendering Slot %d", prev_slot);
+                render_bitmap_from_slot(prev_slot);
+            }
+            reset_button_states();
+        }
+    }
 }
 
 void setup() {
@@ -217,6 +334,9 @@ void setup() {
     pinMode(EINK_RST, OUTPUT);
     pinMode(EINK_BUSY, INPUT);
     pinMode(BUZZER_PIN, OUTPUT);
+    pinMode(SW_LEFT_PIN, INPUT_PULLUP);
+    pinMode(SW_RIGHT_PIN, INPUT_PULLUP);
+
     digitalWrite(EINK_CS, HIGH);
     digitalWrite(EINK_DC, HIGH);
     digitalWrite(EINK_RST, HIGH);
@@ -278,6 +398,7 @@ void setup() {
 void loop() {
     if (stay_awake) {
         webServerManager.handleClient();
+        handle_buttons();
         delay(1);
     }
 }

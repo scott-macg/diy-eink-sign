@@ -16,8 +16,8 @@
 #define EINK_BUSY        22  // Xiao D4
 
 // Peripherals & Microswitches
-#define SW1_BTN_PIN       9  // Xiao D9 / GPIO 9 (Switch 1: Forward / Screen Cycle / Action)
-#define SW2_BTN_PIN      17  // Xiao D7 / GPIO 17 (Switch 2: Back / Secondary Action)
+#define SW_LEFT_PIN      17  // Xiao D7 / GPIO 17 (Left Switch: Prev Slot / Long Press Status Card)
+#define SW_RIGHT_PIN     20  // Xiao D9 / GPIO 20 (Right Switch: Next Slot / Long Press Force Sync)
 #define BUZZER_PIN       16  // Xiao D6 (Piezo Buzzer Audio Alert)
 #define BAT_SENSE_PIN     0  // Xiao D0 / GPIO 0 (Analog Battery Sense via 2x 100k resistor divider)
 
