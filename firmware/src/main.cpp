@@ -66,20 +66,23 @@ bool connect_wifi() {
         pass = WIFI_PASS;
     }
 
-    Serial.printf("[WiFi] Connecting to SSID: '%s'...\n", ssid.c_str());
+    sys_log("[WiFi] Connecting to SSID: '%s'...", ssid.c_str());
+    WiFi.disconnect(true, true);
+    delay(100);
     WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
     WiFi.begin(ssid.c_str(), pass.c_str());
 
     uint32_t start_ms = millis();
     while (WiFi.status() != WL_CONNECTED && (millis() - start_ms) < timeout_ms) {
-        delay(100);
+        delay(200);
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.printf("[WiFi] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
+        sys_log("[WiFi] Connected! IP: %s (RSSI: %d dBm)", WiFi.localIP().toString().c_str(), WiFi.RSSI());
         return true;
     } else {
-        Serial.println("[WiFi] Connection timed out.");
+        sys_log("[WiFi] Connection timed out.");
         return false;
     }
 }
@@ -107,7 +110,7 @@ int check_delta_checkpoint(const String &cached_etag) {
     int httpCode = http.sendRequest("HEAD");
     uint32_t req_dur = millis() - req_start;
 
-    Serial.printf("[Checkpoint] Endpoint: %s | Code: %d | Time: %ums\n", endpoint.c_str(), httpCode, req_dur);
+    sys_log("[Checkpoint] Endpoint: %s | Code: %d | Time: %ums", endpoint.c_str(), httpCode, req_dur);
     http.end();
     return httpCode;
 }
@@ -130,31 +133,68 @@ bool perform_full_sync(ManifestData &manifest) {
                       "&batt_pct=" + String(pct) + 
                       "&reboot_count=" + String(boot_counter);
 
+    sys_log("[Sync] Requesting GET %s", sync_url.c_str());
     http.begin(sync_url);
     int httpCode = http.GET();
 
     if (httpCode == HTTP_CODE_OK) {
         String payload = http.getString();
+        sys_log("[Sync] HTTP 200 OK received (%u bytes)", payload.length());
         http.end();
         return saveManifest(payload, manifest);
     }
 
-    Serial.printf("[Sync] Failed with HTTP code: %d\n", httpCode);
+    sys_log("[Sync] Failed with HTTP code: %d", httpCode);
     http.end();
     return false;
+}
+
+void render_fallback_card() {
+    sys_log("[Display] Rendering fallback status card...");
+    display.init(115200, true, 50, false);
+    SPI.end();
+    SPI.begin(EINK_SCK, -1, EINK_MOSI, EINK_CS);
+    display.setRotation(3);
+
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+        display.drawRect(2, 2, EINK_WIDTH - 4, EINK_HEIGHT - 4, GxEPD_BLACK);
+        display.drawRect(4, 4, EINK_WIDTH - 8, EINK_HEIGHT - 8, GxEPD_RED);
+        display.setCursor(15, 25);
+        display.setTextColor(GxEPD_BLACK);
+        display.setTextSize(2);
+        display.print("DIY E-Ink Sign");
+        display.setCursor(15, 55);
+        display.setTextSize(1);
+        display.setTextColor(GxEPD_RED);
+        display.print("Status: Hardware Active");
+        display.setCursor(15, 75);
+        display.setTextColor(GxEPD_BLACK);
+        display.printf("IP: %s", WiFi.localIP().toString().c_str());
+        display.setCursor(15, 95);
+        display.printf("Bat: %.2fV (%d%%)", read_battery_volts(), calculate_battery_pct(read_battery_adc()));
+    } while (display.nextPage());
+
+    display.hibernate();
+    sys_log("[Display] Fallback card render complete.");
 }
 
 // Render raw 1-bit LittleFS bitmap to Waveshare display
 void render_bitmap_from_flash() {
     if (!loadBitmapSlot(0, bw_buffer, red_buffer, BITMAP_BUFFER_SIZE)) {
-        Serial.println("[Display] Failed to load bitmap slot from LittleFS");
+        sys_log("[Display] Slot 0 missing from LittleFS. Rendering fallback card...");
+        render_fallback_card();
         return;
     }
 
-    SPI.begin(EINK_SCK, -1, EINK_MOSI, EINK_CS);
+    sys_log("[Display] Initializing E-Paper display SPI...");
     display.init(115200, true, 50, false);
+    SPI.end();
+    SPI.begin(EINK_SCK, -1, EINK_MOSI, EINK_CS);
     display.setRotation(3); // 180-degree inverted landscape for physical enclosure mounting
 
+    sys_log("[Display] Flushing bitmap buffers to Waveshare 2.9\" panel...");
     display.firstPage();
     do {
         display.fillScreen(GxEPD_WHITE);
@@ -163,7 +203,7 @@ void render_bitmap_from_flash() {
     } while (display.nextPage());
 
     display.hibernate();
-    Serial.println("[Display] Render complete, panel hibernating.");
+    sys_log("[Display] Render complete! Panel hibernating.");
 }
 
 void setup() {
@@ -171,7 +211,17 @@ void setup() {
     Serial.begin(115200);
     delay(100);
 
-    Serial.printf("\n=== DIY E-Ink Sign v0.2.0 (Boot #%u) ===\n", boot_counter);
+    // Initialize hardware GPIO pin modes explicitly for ESP32 Arduino v3 compatibility
+    pinMode(EINK_CS, OUTPUT);
+    pinMode(EINK_DC, OUTPUT);
+    pinMode(EINK_RST, OUTPUT);
+    pinMode(EINK_BUSY, INPUT);
+    pinMode(BUZZER_PIN, OUTPUT);
+    digitalWrite(EINK_CS, HIGH);
+    digitalWrite(EINK_DC, HIGH);
+    digitalWrite(EINK_RST, HIGH);
+
+    sys_log("\n=== DIY E-Ink Sign v0.2.0 (Boot #%u) ===", boot_counter);
 
     initManifestFS();
     configManager.begin();
@@ -182,48 +232,32 @@ void setup() {
     bool need_full_sync = false;
 
     if (!has_manifest || !manifest.has_cached_slots) {
-        Serial.println("[Strategy] No valid cache found -> Full Morning Sync required.");
+        sys_log("[Strategy] No valid cache found -> Full Morning Sync required.");
         need_full_sync = true;
     } else {
         // Run Sub-1.5s Mid-Day Delta Checkpoint
-        Serial.println("[Strategy] Running Mid-Day Delta Checkpoint...");
+        sys_log("[Strategy] Running Mid-Day Delta Checkpoint...");
         int check_code = check_delta_checkpoint(manifest.etag);
 
         if (check_code == 304) {
-            Serial.println("[Strategy] HTTP 304 Not Modified -> Rapid disconnect, rendering local LittleFS cache.");
+            sys_log("[Strategy] HTTP 304 Not Modified -> Rapid disconnect, rendering local LittleFS cache.");
         } else if (check_code == 200 || check_code == -1) {
-            Serial.println("[Strategy] ETag modified or initial sync -> Fetching new manifest.");
+            sys_log("[Strategy] ETag modified or initial sync -> Fetching new manifest.");
             need_full_sync = true;
         }
     }
 
     if (need_full_sync) {
         if (perform_full_sync(manifest)) {
-            Serial.println("[Sync] Full sync successful, manifest updated.");
+            sys_log("[Sync] Full sync successful, manifest updated.");
         } else {
-            Serial.println("[Sync] Sync failed, using existing cache if available.");
+            sys_log("[Sync] Sync failed, using existing cache if available.");
         }
     }
 
     // Render screen and play notification audio chime
     render_bitmap_from_flash();
     play_chime();
-
-    // === DEEP SLEEP DISABLED FOR DEVELOPMENT ===
-    // TODO: Re-enable deep sleep system when server<->device integration is stable.
-    // The original logic checked USB connection and developer_mode to decide
-    // whether to stay awake or enter deep sleep. For now, always stay awake.
-    //
-    // Original conditional:
-    // bool usb_connected = (bool)Serial;
-    // bool dev_mode = configManager.config.developer_mode || manifest.developer_mode;
-    // if (usb_connected || dev_mode) { ... } else {
-    //     uint32_t sleep_sec = manifest.sleep_interval_sec > 0 ? manifest.sleep_interval_sec : DEFAULT_SLEEP_SEC;
-    //     Serial.printf("[Power] Running on battery -> Entering deep sleep for %u seconds...\n\n", sleep_sec);
-    //     WiFi.disconnect(true);
-    //     esp_sleep_enable_timer_wakeup(sleep_sec * 1000000ULL);
-    //     esp_deep_sleep_start();
-    // }
 
     stay_awake = true;
     connect_wifi();
@@ -238,7 +272,7 @@ void setup() {
             noTone(BUZZER_PIN);
         }
     );
-    Serial.println("[Power] Deep sleep DISABLED (dev build) -> Staying awake with Web Console active.");
+    sys_log("[Power] Deep sleep DISABLED (dev build) -> Staying awake with Web Console active.");
 }
 
 void loop() {

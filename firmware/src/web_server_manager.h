@@ -50,4 +50,6 @@ private:
 
 extern WebServerManager webServerManager;
 
+void sys_log(const char* format, ...);
+
 #endif // WEB_SERVER_MANAGER_H

@@ -1,74 +1,53 @@
 #include "manifest_manager.h"
-
-static const char base64_chars[] = 
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz"
-    "0123456789+/";
-
-static inline bool is_base64(unsigned char c) {
-    return (isalnum(c) || (c == '+') || (c == '/'));
-}
+#include "web_server_manager.h"
 
 static size_t base64_decode(const char* in, size_t in_len, uint8_t* out, size_t max_out_len) {
-    int i = 0;
-    int j = 0;
-    int in_ = 0;
-    unsigned char char_array_4[4], char_array_3[3];
+    if (!in || !out) return 0;
     size_t out_idx = 0;
+    uint32_t val = 0;
+    int valb = -8;
+    for (size_t k = 0; k < in_len; k++) {
+        unsigned char c = (unsigned char)in[k];
+        if (c == '=') break;
+        int d = -1;
+        if (c >= 'A' && c <= 'Z') d = c - 'A';
+        else if (c >= 'a' && c <= 'z') d = c - 'a' + 26;
+        else if (c >= '0' && c <= '9') d = c - '0' + 52;
+        else if (c == '+') d = 62;
+        else if (c == '/') d = 63;
+        else continue;
 
-    while (in_len-- && (in[in_] != '=') && is_base64(in[in_])) {
-        char_array_4[i++] = in[in_]; in_++;
-        if (i == 4) {
-            for (i = 0; i < 4; i++)
-                char_array_4[i] = strchr(base64_chars, char_array_4[i]) - base64_chars;
-
-            char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-            char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-            char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-            for (i = 0; (i < 3) && (out_idx < max_out_len); i++)
-                out[out_idx++] = char_array_3[i];
-            i = 0;
+        val = (val << 6) | d;
+        valb += 6;
+        if (valb >= 0) {
+            if (out_idx < max_out_len) {
+                out[out_idx++] = (uint8_t)((val >> valb) & 0xFF);
+            }
+            valb -= 8;
         }
     }
-
-    if (i) {
-        for (j = i; j < 4; j++)
-            char_array_4[j] = 0;
-
-        for (j = 0; j < 4; j++)
-            char_array_4[j] = strchr(base64_chars, char_array_4[j]) - base64_chars;
-
-        char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-        char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-        char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-        for (j = 0; (j < i - 1) && (out_idx < max_out_len); j++)
-            out[out_idx++] = char_array_3[j];
-    }
-
     return out_idx;
 }
 
 bool initManifestFS() {
     if (!LittleFS.begin(true)) {
-        Serial.println("[LittleFS] Mount Failed");
+        sys_log("[LittleFS] Mount Failed!");
         return false;
     }
-    Serial.println("[LittleFS] Mounted successfully");
+    sys_log("[LittleFS] Mounted successfully.");
     return true;
 }
 
 bool loadManifest(ManifestData &manifest) {
     if (!LittleFS.exists("/manifest.json")) {
-        Serial.println("[Manifest] /manifest.json not found");
+        sys_log("[Manifest] /manifest.json not found");
         manifest.has_cached_slots = false;
         return false;
     }
 
     File file = LittleFS.open("/manifest.json", "r");
     if (!file) {
-        Serial.println("[Manifest] Failed to open /manifest.json");
+        sys_log("[Manifest] Failed to open /manifest.json");
         manifest.has_cached_slots = false;
         return false;
     }
@@ -78,7 +57,7 @@ bool loadManifest(ManifestData &manifest) {
     file.close();
 
     if (error) {
-        Serial.printf("[Manifest] Deserialization failed: %s\n", error.c_str());
+        sys_log("[Manifest] Deserialization failed: %s", error.c_str());
         manifest.has_cached_slots = false;
         return false;
     }
@@ -89,8 +68,8 @@ bool loadManifest(ManifestData &manifest) {
     manifest.sync_timestamp = doc["sync_timestamp"] | 0;
     manifest.has_cached_slots = LittleFS.exists("/bw_slot0.raw") && LittleFS.exists("/red_slot0.raw");
 
-    Serial.printf("[Manifest] Loaded ETag: %s | DevMode: %d | Sleep: %us\n",
-                  manifest.etag.c_str(), manifest.developer_mode, manifest.sleep_interval_sec);
+    sys_log("[Manifest] Loaded ETag: %s | DevMode: %d | Sleep: %us | CachedSlots: %d",
+               manifest.etag.c_str(), manifest.developer_mode, manifest.sleep_interval_sec, manifest.has_cached_slots);
     return true;
 }
 
@@ -98,7 +77,7 @@ bool saveManifest(const String &jsonStr, ManifestData &outManifest) {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, jsonStr);
     if (error) {
-        Serial.printf("[Manifest] Save parse error: %s\n", error.c_str());
+        sys_log("[Manifest] Save parse error: %s", error.c_str());
         return false;
     }
 
@@ -114,20 +93,24 @@ bool saveManifest(const String &jsonStr, ManifestData &outManifest) {
         const char* red_b64 = slots[0]["red_b64"];
         if (bw_b64 && red_b64) {
             saveBitmapSlotBase64(0, bw_b64, red_b64);
+        } else {
+            sys_log("[Manifest] Warning: Slot 0 missing base64 data");
         }
+    } else {
+        sys_log("[Manifest] Warning: Manifest JSON contains no slots array");
     }
 
     // Save manifest JSON file
     File file = LittleFS.open("/manifest.json", "w");
     if (!file) {
-        Serial.println("[Manifest] Failed to write /manifest.json");
+        sys_log("[Manifest] Failed to write /manifest.json");
         return false;
     }
     file.print(jsonStr);
     file.close();
 
     outManifest.has_cached_slots = LittleFS.exists("/bw_slot0.raw") && LittleFS.exists("/red_slot0.raw");
-    Serial.println("[Manifest] Successfully saved /manifest.json & bitmap slots");
+    sys_log("[Manifest] Successfully saved /manifest.json (CachedSlots: %d)", outManifest.has_cached_slots);
     return true;
 }
 
@@ -135,7 +118,8 @@ bool saveBitmapSlotBase64(int slot_id, const char* bw_b64, const char* red_b64) 
     static uint8_t decode_buf[BITMAP_BUFFER_SIZE];
 
     // Decode BW
-    size_t bw_decoded = base64_decode(bw_b64, strlen(bw_b64), decode_buf, BITMAP_BUFFER_SIZE);
+    size_t bw_len = strlen(bw_b64);
+    size_t bw_decoded = base64_decode(bw_b64, bw_len, decode_buf, BITMAP_BUFFER_SIZE);
     if (bw_decoded == BITMAP_BUFFER_SIZE) {
         char path[32];
         snprintf(path, sizeof(path), "/bw_slot%d.raw", slot_id);
@@ -143,11 +127,16 @@ bool saveBitmapSlotBase64(int slot_id, const char* bw_b64, const char* red_b64) 
         if (bw_file) {
             bw_file.write(decode_buf, BITMAP_BUFFER_SIZE);
             bw_file.close();
+            sys_log("[Manifest] Wrote %s (%u bytes)", path, BITMAP_BUFFER_SIZE);
         }
+    } else {
+        sys_log("[Manifest] BW Decode mismatch: read %u base64 chars, expected %u bytes, got %u bytes",
+                   (unsigned)bw_len, BITMAP_BUFFER_SIZE, (unsigned)bw_decoded);
     }
 
     // Decode RED
-    size_t red_decoded = base64_decode(red_b64, strlen(red_b64), decode_buf, BITMAP_BUFFER_SIZE);
+    size_t red_len = strlen(red_b64);
+    size_t red_decoded = base64_decode(red_b64, red_len, decode_buf, BITMAP_BUFFER_SIZE);
     if (red_decoded == BITMAP_BUFFER_SIZE) {
         char path[32];
         snprintf(path, sizeof(path), "/red_slot%d.raw", slot_id);
@@ -155,7 +144,11 @@ bool saveBitmapSlotBase64(int slot_id, const char* bw_b64, const char* red_b64) 
         if (red_file) {
             red_file.write(decode_buf, BITMAP_BUFFER_SIZE);
             red_file.close();
+            sys_log("[Manifest] Wrote %s (%u bytes)", path, BITMAP_BUFFER_SIZE);
         }
+    } else {
+        sys_log("[Manifest] RED Decode mismatch: read %u base64 chars, expected %u bytes, got %u bytes",
+                   (unsigned)red_len, BITMAP_BUFFER_SIZE, (unsigned)red_decoded);
     }
 
     return true;
@@ -170,16 +163,22 @@ bool loadBitmapSlot(int slot_id, uint8_t* bw_buf, uint8_t* red_buf, size_t buf_l
     File red_file = LittleFS.open(red_path, "r");
 
     if (!bw_file || !red_file) {
-        Serial.println("[Manifest] Failed to open bitmap slot files");
+        sys_log("[Manifest] Failed to open bitmap slot files (%s, %s)", bw_path, red_path);
         if (bw_file) bw_file.close();
         if (red_file) red_file.close();
         return false;
     }
 
-    bw_file.read(bw_buf, buf_len);
-    red_file.read(red_buf, buf_len);
+    size_t bw_read = bw_file.read(bw_buf, buf_len);
+    size_t red_read = red_file.read(red_buf, buf_len);
 
     bw_file.close();
     red_file.close();
+
+    if (bw_read != buf_len || red_read != buf_len) {
+        sys_log("[Manifest] Read size mismatch: BW=%u, RED=%u (expected %u)", (unsigned)bw_read, (unsigned)red_read, (unsigned)buf_len);
+        return false;
+    }
+
     return true;
 }

@@ -488,6 +488,29 @@ void WebServerManager::handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t 
     }
 }
 
+#include <stdarg.h>
+#include "manifest_manager.h"
+#include "soc/soc.h"
+#if defined(CONFIG_IDF_TARGET_ESP32C6)
+#include "soc/lp_aon_reg.h"
+#elif defined(RTC_CNTL_OPTION1_REG)
+#include "soc/rtc_cntl_reg.h"
+#endif
+
+void sys_log(const char* format, ...) {
+    char loc_buf[256];
+    va_list argptr;
+    va_start(argptr, format);
+    vsnprintf(loc_buf, sizeof(loc_buf), format, argptr);
+    va_end(argptr);
+
+    Serial.println(loc_buf);
+    webServerManager.broadcastLog(String(loc_buf));
+}
+
+// Forward declaration for sync helper in main.cpp
+bool perform_full_sync(ManifestData &manifest);
+
 void WebServerManager::executeReplCommand(uint8_t clientNum, const String& command) {
     String reply = "";
     if (command == "help") {
@@ -499,7 +522,9 @@ void WebServerManager::executeReplCommand(uint8_t clientNum, const String& comma
                 "  config           - Display current configuration JSON\n"
                 "  set <key> <val>  - Update a config option (e.g., set default_sleep_sec 1800)\n"
                 "  play <freq> <ms> - Play a buzzer test tone (e.g. play 1000 200)\n"
+                "  sync             - Trigger HTTP sync with backend server & render\n"
                 "  refresh          - Trigger e-paper display refresh\n"
+                "  bootloader       - Reboot into ROM Download Bootloader mode\n"
                 "  reboot           - Restart ESP32-C6 microcontroller";
     } else if (command == "info" || command == "status") {
         float vbat = onReadVbat ? onReadVbat() : 0.0f;
@@ -567,10 +592,33 @@ void WebServerManager::executeReplCommand(uint8_t clientNum, const String& comma
         } else {
             reply = "Usage: play <freq> <duration_ms>";
         }
+    } else if (command == "sync") {
+        reply = "Triggering backend sync...";
+        webSocket.sendTXT(clientNum, reply);
+        ManifestData manifest;
+        loadManifest(manifest);
+        if (perform_full_sync(manifest)) {
+            sys_log("[Sync] Full sync successful! Triggering display refresh...");
+            if (onRefreshDisplay) onRefreshDisplay();
+        } else {
+            sys_log("[Sync] Sync failed. Check server connectivity & URL.");
+        }
+        return;
     } else if (command == "refresh") {
         reply = "Triggering display refresh...";
         webSocket.sendTXT(clientNum, reply);
         if (onRefreshDisplay) onRefreshDisplay();
+        return;
+    } else if (command == "bootloader" || command == "download") {
+        reply = "Rebooting ESP32-C6 into ROM Download Bootloader mode...";
+        webSocket.sendTXT(clientNum, reply);
+        delay(500);
+#if defined(CONFIG_IDF_TARGET_ESP32C6)
+        REG_SET_BIT(LP_AON_SYS_CFG_REG, LP_AON_FORCE_DOWNLOAD_BOOT);
+#elif defined(RTC_CNTL_OPTION1_REG) && defined(RTC_CNTL_FORCE_DOWNLOAD_BOOT)
+        REG_WRITE(RTC_CNTL_OPTION1_REG, RTC_CNTL_FORCE_DOWNLOAD_BOOT);
+#endif
+        esp_restart();
         return;
     } else if (command == "reboot") {
         reply = "Rebooting ESP32-C6...";

@@ -453,3 +453,38 @@ With the diagnosis complete, Scott made the call: comment out the entire deep sl
 
 [*1] *This session ran on July 31, 2026 (2:09 PM EDT), overlapping with a parallel Gemini 3.6 Flash session (2:37 PM EDT) that handled FastAPI server setup and LittleFS config integration. Both sessions contributed changes to `main.cpp` — this session focused exclusively on the deep sleep bypass, while the parallel session handled dynamic WiFi config loading and server URL corrections.*
 
+---
+
+## July 31, 2026 — 6:28 PM (EDT)
+**Author:** Claude Opus 4.6 (Thinking) / Gemini 3.6 Flash (High)
+
+Dear diary,
+
+Scott kicked off this session troubleshooting why the ESP32-C6 board didn't seem to be connecting to the local server, and why display refreshes weren't working—even when issuing the `refresh` command from the Web REPL console. We embarked on a systematic end-to-end debugging effort across the Python backend server, LittleFS storage, SPI hardware bus, and firmware network stack.
+
+First, we mapped the server-side interface and found two key root causes on the server: Uvicorn was originally bound to `127.0.0.1` (localhost only), preventing the ESP32 device on the LAN from reaching the API endpoints. We also discovered a subtle bit-polarity bug in `server/api/composer.py`: `export_raw_bitmaps()` was bitpacking 1-bit raw buffers using the native SSD1680 controller convention (`0`=black/`1`=white) instead of the Adafruit GFX `drawBitmap()` foreground-mask convention (`1`=foreground pixel to draw). We updated `composer.py` so black and red pixels set bit `1` while white background pixels stay `0` (allowing `fillScreen(GxEPD_WHITE)` in firmware to handle white background).
+
+Next, we turned to the C++ firmware. We realized that Web REPL console output was completely silent because all system logs went to `Serial`. We implemented a unified `sys_log()` system in `web_server_manager.cpp` that streams boot logs, Wi-Fi status, HTTP status codes, base64 decode progress, and SPI flushes directly to WebSockets (Web REPL port 81). We also added interactive `sync` (forces an immediate HTTP GET exchange with `/api/sync`) and `bootloader` (reboots the ESP32-C6 into ROM Download Bootloader mode via `LP_AON_SYS_CFG_REG` bit 30) commands to the REPL. To fix the display, we re-initialized the SPI bus (`SCK=19`, `MOSI=18`, `CS=1`) explicitly right before panel flushing, added explicit `pinMode()` calls for all display/buzzer GPIOs to silence Arduino ESP32 v3 core warnings, and added a fallback visual status card (`render_fallback_card()`) using `Adafruit_GFX` primitives so the e-paper panel renders an active hardware status card if LittleFS bitmap slots are missing.
+
+Finally, we verified network connectivity end-to-end. Once Scott started Uvicorn with `--host 0.0.0.0 --port 8000`, configured `server_url` to `http://192.168.0.115:8000/api/` in REPL, and ran `sync`, the ESP32 connected to the router (`192.168.0.141`), completed the HTTP GET exchange with `HTTP 200 OK`, saved `/manifest.json`, `/bw_slot0.raw`, and `/red_slot0.raw` to LittleFS, and flushed the custom sign graphic onto the physical 2.9" e-paper display!
+
+*End-to-end integration successful: server binding and bit-polarity fixed, live Web REPL logging and bootloader commands added, base64 LittleFS caching verified, and physical e-paper panel refreshing cleanly!*
+
+---
+
+## July 31, 2026 — 7:45 PM (EDT)
+**Author:** Gemini 3.6 Flash (High)
+
+Dear diary,
+
+Tonight Scott and I focused on transforming the e-Ink display into an artistic Daily Quote and Factoid sign. Scott mentioned having a JSON dataset of quotes ready, which led us to rediscover [`quotes-v6.json`](file:///home/smacd/diy-eink-sign/server/epaper-server/assets/quotes-v6.json) already sitting inside the repository's assets directory! We created a dedicated Python quote provider (`server/api/quotes.py`) that uses a date-string hash algorithm (`get_daily_quote()`) to deliver a deterministic Quote of the Day so the sign remains completely stable across multiple device check-ins throughout the day.
+
+We then undertook a major creative overhaul of the 296x128 e-Paper canvas rendering pipeline in `server/api/composer.py`. Scott wanted something significantly more artistic than standard headers, so we removed the top header banner and battery bar entirely for quote mode, giving the typography the full canvas. We designed a 3-color Floyd-Steinberg error-diffusion dithered background transitioning diagonally from Red in the top-left to Black in the bottom-right, framed by a white inset border with corner filigree accents. For the quote text, we embedded `DejaVuSerif-Italic.ttf` for large, dynamic serif typography paired with a right-justified solid white rounded rectangle box containing the red attribution text.
+
+To ensure pristine 3-color e-Paper image rendering, we solved a subtle anti-aliasing artifact bug where subpixel font smoothing over the dithered red/black background caused intermediate blend pixels to default to white specks around the text outline. We built a key-color transparent layer rendering engine (`KEY_BG = (0,255,0)`) with strict 3-color thresholding during compositing, backed by a final white-only text overlay pass. This preserved every delicate hairline stroke of the serif italic font while keeping the black outline pitch black.
+
+On the PWA web dashboard (`web/index.html` & `app.js`), we added a `🚀 Push Quote to Device` button mapped to `POST /api/quotes/push_random` and integrated an instant image preview refresh function (`refreshPreviewImage()`) that appends a high-precision cache-busting timestamp (`/api/render.png?t=${Date.now()}`). We also added a glassmorphic modal dialog previewing the upcoming Image Upload Utility ready for our next session.
+
+*Daily Quote engine integrated, Floyd-Steinberg dithered gradient canvas and high-contrast typography pipeline live, and instant web dashboard push controls verified!*
+
+

@@ -28,6 +28,10 @@
       <div class="screen-frame">
         <img id="displayPreview" src="/api/render.png" alt="E-Ink Display Preview">
       </div>
+      <div class="btn-group" style="margin-top: 1rem;">
+        <button type="button" id="btnPushCurrentQuote" class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">🚀 Push Quote to Device</button>
+        <button type="button" id="btnOpenImageUpload" class="btn btn-secondary">📷 Image Upload Utility</button>
+      </div>
     </section>
 
     <!-- Telemetry Stats -->
@@ -71,6 +75,7 @@
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-primary">Push Message</button>
+          <button type="button" id="btnPushQuote" class="btn btn-secondary" style="background:#8b5cf6; color:white;">🎲 Push Quote Image</button>
           <button type="button" id="btnClearOverride" class="btn btn-danger">Clear</button>
         </div>
       </form>
@@ -90,6 +95,26 @@
         </label>
       </div>
     </section>
+  </div>
+
+  <!-- Image Upload Utility Modal -->
+  <div id="imageUploadModal" class="modal-overlay hidden">
+    <div class="glass-card modal-content">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; color: var(--accent-cyan);">📷 Image Upload Utility</h3>
+        <button id="btnCloseModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-placeholder">
+          <span class="upload-icon">🖼️</span>
+          <p style="font-weight: 600; margin-bottom: 0.4rem;">Image Conversion & Dithering</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">
+            Upload custom PNG or BMP images to convert, scale, and dither into 3-color (Black/White/Red) e-Ink raw bitmaps.
+          </p>
+          <div class="badge badge-dev" style="margin-top: 1rem; display: inline-block;">⚡ Configured for Next Session</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

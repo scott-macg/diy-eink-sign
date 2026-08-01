@@ -40,6 +40,13 @@ async function fetchStatus() {
   }
 }
 
+function refreshPreviewImage() {
+  const preview = document.getElementById('displayPreview');
+  if (preview) {
+    preview.src = `${API_BASE}/api/render.png?t=${Date.now()}`;
+  }
+}
+
 // Push Message Form
 document.getElementById('overrideForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -56,12 +63,49 @@ document.getElementById('overrideForm').addEventListener('submit', async (e) => 
       body: JSON.stringify({ message, subtext, duration_minutes: duration })
     });
     if (res.ok) {
+      refreshPreviewImage();
       await fetchStatus();
     }
   } catch (err) {
     console.error('Failed to push override:', err);
   }
 });
+
+// Push Random Quote Buttons
+const handlePushQuote = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/quotes/push_random`, { method: 'POST' });
+    if (res.ok) {
+      refreshPreviewImage();
+      await fetchStatus();
+    }
+  } catch (err) {
+    console.error('Failed to push quote:', err);
+  }
+};
+
+const btnPushQuote = document.getElementById('btnPushQuote');
+if (btnPushQuote) btnPushQuote.addEventListener('click', handlePushQuote);
+
+const btnPushCurrentQuote = document.getElementById('btnPushCurrentQuote');
+if (btnPushCurrentQuote) btnPushCurrentQuote.addEventListener('click', handlePushQuote);
+
+// Image Upload Utility Modal Handlers
+const modal = document.getElementById('imageUploadModal');
+const btnOpenImageUpload = document.getElementById('btnOpenImageUpload');
+const btnCloseModal = document.getElementById('btnCloseModal');
+
+if (btnOpenImageUpload && modal) {
+  btnOpenImageUpload.addEventListener('click', () => modal.classList.remove('hidden'));
+}
+if (btnCloseModal && modal) {
+  btnCloseModal.addEventListener('click', () => modal.classList.add('hidden'));
+}
+if (modal) {
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.add('hidden');
+  });
+}
 
 // Clear Override Button
 document.getElementById('btnClearOverride').addEventListener('click', async () => {
@@ -70,6 +114,7 @@ document.getElementById('btnClearOverride').addEventListener('click', async () =
     if (res.ok) {
       document.getElementById('overrideMessage').value = '';
       document.getElementById('overrideSubtext').value = '';
+      refreshPreviewImage();
       await fetchStatus();
     }
   } catch (err) {

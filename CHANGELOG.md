@@ -10,8 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - 2026-07-31
 
 ### Added & Improved
+- **Deterministic Quote Engine & High-Contrast Typography Layout (`server/api/quotes.py` & `composer.py`):**
+  - Integrated JSON quote repository ([`quotes-v6.json`](file:///home/smacd/diy-eink-sign/server/epaper-server/assets/quotes-v6.json)) into FastAPI server.
+  - Implemented `get_daily_quote()` with date-hash seeding for stable daily quote rendering across device check-ins.
+  - Created creative quote layout: removed top banner, added Floyd-Steinberg error-diffusion Red-to-Black dithered gradient background, white inset border with corner filigree accents, dynamic large Serif Italic typography (`DejaVuSerif-Italic.ttf`), and a solid white rounded attribution box with red text.
+  - Developed key-color layer compositing with strict 3-color thresholding and final white overlay pass to eliminate font anti-aliasing artifacts and preserve thin italic hairlines.
+- **PWA Dashboard Push Quote Controls & Image Uploader Modal (`web/`):**
+  - Added `🚀 Push Quote to Device` button and instant screen preview refresh with cache-busting timestamping.
+  - Mapped `POST /api/quotes/push_random` endpoint for pushing new quotes on demand.
+  - Added placeholder button and glassmorphic modal overlay for upcoming Image Upload Utility.
 - **FastAPI Local Server & PWA Mounting (`server/api/index.py`):** Mounted static web dashboard directory (`web/`) directly to root (`/`) via FastAPI `StaticFiles`, enabling unified local hosting of both the PWA frontend and REST API on `http://localhost:8000`.
 - **Dynamic LittleFS Config Integration (`firmware/src/main.cpp` & `config.h`):** Integrated `ConfigManager` in `main.cpp` to dynamically load Wi-Fi credentials (`wifi_ssid`, `wifi_pass`) and server URL (`server_url`) from LittleFS `/config.json`.
+- **Live Web REPL Verbose Logging (`firmware/src/web_server_manager.cpp` & `main.cpp`):** Implemented `sys_log()` system broadcasting real-time boot status, Wi-Fi connections, HTTP status codes, base64 buffer sizes, and SPI panel flushes to WebSockets (Web REPL console port 81).
+- **Web REPL `sync` & `bootloader` Commands (`firmware/src/web_server_manager.cpp`):** Added `sync` command to trigger backend HTTP exchanges and `bootloader` command to reboot the ESP32-C6 directly into ROM Download Bootloader mode (`LP_AON_FORCE_DOWNLOAD_BOOT`).
+- **Visual Fallback Status Card (`firmware/src/main.cpp`):** Added `render_fallback_card()` using `Adafruit_GFX` primitives to render hardware status (IP, battery voltage %, status) when bitmap cache is missing.
+- **Robust Bit-Shift Base64 Decoder (`firmware/src/manifest_manager.cpp`):** Refactored `base64_decode` with bit-shifting to eliminate padding boundary errors during raw bitmap caching to LittleFS.
 - **Development Mode Deep Sleep Bypass (`firmware/src/main.cpp`):** Disabled deep sleep in `main.cpp` during active server/client development phase, maintaining continuous Wi-Fi connection and running embedded Web Console (`WebServerManager`) on ports 80/81.
 - **180° Display Rotation in C++ Firmware (`firmware/src/main.cpp`):** Configured GxEPD2 rotation to `display.setRotation(3)` (180° inverted landscape) so production firmware automatically matches inverted physical panel enclosure mounting.
 - **180° Image Flip Support (`convert_and_push.py`):** Added `--flip180` flag (and `-r`/`--rotate180`) to image conversion script to invert generated 3-color bitpacked `.raw` buffers for 180° rotated physical panel mounting.
@@ -32,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Refactored project rules in [`AGENTS.md`](file:///home/smacd/diy-eink-sign/AGENTS.md) into a standalone project skill [`wrapup-routine`](file:///.agents/skills/wrapup-routine/SKILL.md), eliminating per-prompt instruction bloat.
 
 ### Fixed
+- **Uvicorn Server Interface Binding (`server/api/index.py`):**
+  - Bound local server execution to `--host 0.0.0.0 --port 8000` to allow incoming LAN HTTP requests from ESP32 clients instead of default localhost-only (`127.0.0.1`).
+- **Bitmap Polarity Mismatch (`server/api/composer.py`):**
+  - Fixed bit-polarity in `export_raw_bitmaps()` to match Adafruit GFX `drawBitmap()` foreground-mask convention (bit `1` = foreground color to draw), resolving negative/inverted panel rendering.
+- **Hardware PinMode Warnings (`firmware/src/main.cpp`):**
+  - Added explicit `pinMode()` calls for `EINK_CS`, `EINK_DC`, `EINK_RST`, `EINK_BUSY`, and `BUZZER_PIN` in `setup()`, eliminating ESP32 Arduino v3 `IO is not set as GPIO` warning logs.
+- **Wi-Fi Handshake Disconnect Reset (`firmware/src/main.cpp`):**
+  - Updated `connect_wifi()` with `WiFi.disconnect(true, true)` and `WiFi.setAutoReconnect(true)` to eliminate Wi-Fi handshake timeouts (`Reason: 210`).
 - **Battery Profiler Generator Bug (`/utils`):**
   - Fixed cumulative minimum latching bug in `generate_cpp_code()` in [`utils/battery_web_profiler.py`](file:///home/smacd/diy-eink-sign/utils/battery_web_profiler.py) that caused identical voltage values across all percentages. Added startup transient guard ($t \ge 180\text{s}$) and 9-sample moving median filtering.
 - **MicroPython Compatibility (`/utils`):**
